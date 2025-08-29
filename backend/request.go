@@ -41,13 +41,22 @@ type ReplayRequest struct {
 	TurnNumber int         `json:"turn_number" binding:"required"`
 	Request    interface{} `json:"request" binding:"required"`
 	Provider   string      `json:"provider"` // 新增：指定provider
+	Model      string      `json:"model"`    // 新增：指定model
+}
+
+// ModelInfo 模型信息
+type ModelInfo struct {
+	Name    string `json:"name"`
+	Model   string `json:"model"`
+	Enabled bool   `json:"enabled"`
 }
 
 // ProviderInfo Provider信息
 type ProviderInfo struct {
-	Name    string `json:"name"`
-	Type    string `json:"type"`
-	Enabled bool   `json:"enabled"`
+	Name    string      `json:"name"`
+	Type    string      `json:"type"`
+	Enabled bool        `json:"enabled"`
+	Models  []ModelInfo `json:"models,omitempty"`
 }
 
 // API响应结构

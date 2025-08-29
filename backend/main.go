@@ -18,7 +18,7 @@ func main() {
 	}
 
 	// 设置Gin模式
-	gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.DebugMode)
 
 	// 创建Gin路由
 	r := gin.Default()

@@ -31,13 +31,21 @@ type OpenAIConfig struct {
 	APIKey string `mapstructure:"api_key"`
 }
 
+// ModelConfig 模型配置
+type ModelConfig struct {
+	Name    string `mapstructure:"name"`
+	Model   string `mapstructure:"model"`
+	Enabled bool   `mapstructure:"enabled"`
+}
+
 // ProviderConfig 单个Provider配置
 type ProviderConfig struct {
-	Name    string `mapstructure:"name"`
-	Type    string `mapstructure:"type"` // openai, anthropic, etc.
-	APIKey  string `mapstructure:"api_key"`
-	BaseURL string `mapstructure:"base_url"`
-	Enabled bool   `mapstructure:"enabled"`
+	Name    string                 `mapstructure:"name"`
+	Type    string                 `mapstructure:"type"` // openai, anthropic, deepseek, etc.
+	APIKey  string                 `mapstructure:"api_key"`
+	BaseURL string                 `mapstructure:"base_url"`
+	Enabled bool                   `mapstructure:"enabled"`
+	Models  map[string]ModelConfig `mapstructure:"models"`
 }
 
 // ProvidersConfig 多Provider配置
@@ -45,6 +53,7 @@ type ProvidersConfig struct {
 	OpenAI    ProviderConfig `mapstructure:"openai"`
 	Anthropic ProviderConfig `mapstructure:"anthropic"`
 	Azure     ProviderConfig `mapstructure:"azure"`
+	DeepSeek  ProviderConfig `mapstructure:"deepseek"`
 	Custom    ProviderConfig `mapstructure:"custom"`
 }
 
@@ -68,20 +77,6 @@ func loadConfig() (*Config, error) {
 	viper.SetDefault("database.driver", "sqlite")
 	viper.SetDefault("database.dsn", "./data/llmtrace.db")
 	viper.SetDefault("openai.api_key", "")
-
-	// Provider默认配置
-	viper.SetDefault("providers.openai.name", "OpenAI")
-	viper.SetDefault("providers.openai.type", "openai")
-	viper.SetDefault("providers.openai.enabled", true)
-	viper.SetDefault("providers.anthropic.name", "Anthropic")
-	viper.SetDefault("providers.anthropic.type", "anthropic")
-	viper.SetDefault("providers.anthropic.enabled", false)
-	viper.SetDefault("providers.azure.name", "Azure OpenAI")
-	viper.SetDefault("providers.azure.type", "azure")
-	viper.SetDefault("providers.azure.enabled", false)
-	viper.SetDefault("providers.custom.name", "Custom Provider")
-	viper.SetDefault("providers.custom.type", "custom")
-	viper.SetDefault("providers.custom.enabled", false)
 
 	// 读取配置文件
 	if err := viper.ReadInConfig(); err != nil {
