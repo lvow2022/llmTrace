@@ -26,19 +26,22 @@ import {
   HistoryOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  ClockCircleOutlined
+  ClockCircleOutlined,
+  PlayCircleOutlined
 } from '@ant-design/icons';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useSessionStore, useRecordStore } from '../../stores';
-import { Record, Session } from '../../types';
+import { Record, Session, ReplaySession } from '../../types';
 import RecordDetail from './components/RecordDetail';
 import ReplayModal from './components/ReplayModal';
+import StartDebugModal from './components/StartDebugModal';
 
 const { Title } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
 const Records: React.FC = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { 
     sessions, 
@@ -60,6 +63,8 @@ const Records: React.FC = () => {
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [replayModalVisible, setReplayModalVisible] = useState(false);
   const [replayRecord, setReplayRecord] = useState<Record | null>(null);
+  const [startDebugModalVisible, setStartDebugModalVisible] = useState(false);
+  const [debugRecord, setDebugRecord] = useState<Record | null>(null);
 
   // 从URL参数获取会话ID
   const sessionIdFromUrl = searchParams.get('session_id');
@@ -212,6 +217,14 @@ const Records: React.FC = () => {
           <Button
             type="link"
             size="small"
+            icon={<PlayCircleOutlined />}
+            onClick={() => handleStartDebug(record)}
+          >
+            开始调试
+          </Button>
+          <Button
+            type="link"
+            size="small"
             danger
             icon={<DeleteOutlined />}
             onClick={() => handleDeleteRecord(record)}
@@ -233,6 +246,21 @@ const Records: React.FC = () => {
   const handleReplayRecord = (record: Record) => {
     setReplayRecord(record);
     setReplayModalVisible(true);
+  };
+
+  // 开始调试
+  const handleStartDebug = (record: Record) => {
+    setDebugRecord(record);
+    setStartDebugModalVisible(true);
+  };
+
+  // 处理调试会话创建成功
+  const handleDebugSuccess = (replaySession: ReplaySession) => {
+    setStartDebugModalVisible(false);
+    setDebugRecord(null);
+    message.success('调试会话创建成功，正在跳转到调试界面...');
+    // 跳转到调试界面
+    navigate(`/replay-debug/${replaySession.id}`);
   };
 
   // 删除记录
@@ -428,6 +456,17 @@ const Records: React.FC = () => {
             fetchRecords(currentSession.id, pagination.current, pagination.pageSize);
           }
         }}
+      />
+
+      {/* 开始调试模态框 */}
+      <StartDebugModal
+        visible={startDebugModalVisible}
+        record={debugRecord}
+        onCancel={() => {
+          setStartDebugModalVisible(false);
+          setDebugRecord(null);
+        }}
+        onSuccess={handleDebugSuccess}
       />
     </div>
   );

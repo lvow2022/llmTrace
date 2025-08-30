@@ -12,68 +12,20 @@ openai:
 providers:
   openai:
     name: "OpenAI"
-    type: "openai"
     api_key: ""  # 从环境变量 LLMTRACE_PROVIDERS_OPENAI_API_KEY 读取
     base_url: ""
     enabled: true
     models:
-      gpt-3.5-turbo:
-        name: "GPT-3.5 Turbo"
-        model: "gpt-3.5-turbo"
-        enabled: true
-      gpt-4:
-        name: "GPT-4"
-        model: "gpt-4"
-        enabled: true
-      gpt-4-turbo:
-        name: "GPT-4 Turbo"
-        model: "gpt-4-turbo-preview"
-        enabled: true
-  anthropic:
-    name: "Anthropic"
-    type: "anthropic"
-    api_key: ""  # 从环境变量 LLMTRACE_PROVIDERS_ANTHROPIC_API_KEY 读取
-    base_url: ""
-    enabled: false
-    models:
-      claude-3-sonnet:
-        name: "Claude 3 Sonnet"
-        model: "claude-3-sonnet-20240229"
-        enabled: true
-      claude-3-opus:
-        name: "Claude 3 Opus"
-        model: "claude-3-opus-20240229"
-        enabled: true
-  azure:
-    name: "Azure OpenAI"
-    type: "azure"
-    api_key: ""  # 从环境变量 LLMTRACE_PROVIDERS_AZURE_API_KEY 读取
-    base_url: ""
-    enabled: false
-    models:
-      gpt-35-turbo:
-        name: "GPT-3.5 Turbo (Azure)"
-        model: "gpt-35-turbo"
-        enabled: true
+      - "gpt-3.5-turbo"
+      - "gpt-4"
+      - "gpt-4-turbo-preview"
+
   deepseek:
     name: "DeepSeek"
-    type: "deepseek"
     api_key: "sk-0a5fcce2f03f45bcb7419f70769f65d1"  # 从环境变量 LLMTRACE_PROVIDERS_DEEPSEEK_API_KEY 读取
     base_url: "https://api.deepseek.com"
     enabled: true
     models:
-      deepseek-chat:
-        name: "DeepSeek Chat"
-        model: "deepseek-chat"
-        enabled: true
-      deepseek-coder:
-        name: "DeepSeek Coder"
-        model: "deepseek-coder"
-        enabled: true
-  custom:
-    name: "Custom Provider"
-    type: "custom"
-    api_key: ""  # 从环境变量 LLMTRACE_PROVIDERS_CUSTOM_API_KEY 读取
-    base_url: ""
-    enabled: false
-    models: {}
+      - "deepseek-chat"
+      - "deepseek-coder"
+      - "deepseek-chat-fast"

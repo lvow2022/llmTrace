@@ -6,6 +6,8 @@ import MainLayout from './components/Layout/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Sessions from './pages/Sessions';
 import Records from './pages/Records';
+import ReplaySessions from './pages/ReplaySessions';
+import ReplayDebug from './pages/ReplayDebug';
 import Settings from './pages/Settings';
 import './App.css';
 
@@ -19,6 +21,8 @@ const App: React.FC = () => {
               <Route index element={<Dashboard />} />
               <Route path="sessions" element={<Sessions />} />
               <Route path="records" element={<Records />} />
+              <Route path="replay-sessions" element={<ReplaySessions />} />
+              <Route path="replay-debug/:id" element={<ReplayDebug />} />
               <Route path="settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

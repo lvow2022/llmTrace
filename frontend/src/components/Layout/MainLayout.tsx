@@ -8,6 +8,7 @@ import {
   HistoryOutlined,
   DashboardOutlined,
   SettingOutlined,
+  PlayCircleOutlined,
 } from '@ant-design/icons';
 import { useAppStore } from '../../stores';
 
@@ -36,6 +37,11 @@ const MainLayout: React.FC = () => {
       key: '/records',
       icon: <HistoryOutlined />,
       label: '调用记录',
+    },
+    {
+      key: '/replay-sessions',
+      icon: <PlayCircleOutlined />,
+      label: '调试会话',
     },
     {
       key: '/settings',

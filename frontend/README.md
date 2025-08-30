@@ -1,220 +1,355 @@
-# LLM Trace 前端
+# LLM Trace Frontend - 前端开发文档
 
-这是LLM调用追踪系统的前端实现，基于React + TypeScript + Ant Design构建。
+## 🎯 项目概述
 
-## 🚀 功能特性
+LLM Trace前端是一个基于React + TypeScript的Web应用，用于管理和调试LLM调用记录。支持生产环境的会话管理和记录查看，以及调试环境的多轮对话调试功能。
 
-### 📊 仪表盘
-- 系统概览统计
-- 会话和记录数量统计
-- 最近会话和记录展示
-- 实时数据更新
+## 🏗️ 技术栈
 
-### 💬 会话管理
-- 会话列表展示
-- 会话搜索和筛选
-- 会话详情查看
-- 会话统计信息
-
-### 📝 调用记录
-- 记录列表展示
-- 状态筛选（成功/错误/处理中）
-- 记录详情查看
-- 请求和响应内容展示
-- **记录重放功能** - 支持选择不同的AI Provider
-- 记录删除功能
-
-### ⚙️ 系统设置
-- API配置管理
-- 界面主题设置
-- 分页大小配置
-- 数据保留策略
-
-### 🤖 AI Provider管理
-- **多Provider支持** - OpenAI、Anthropic、Azure、Custom
-- **Provider选择** - 重放时选择不同的AI服务
-- **配置管理** - 后端统一管理API密钥
-- **动态切换** - 支持运行时切换Provider
-
-## 🛠️ 技术栈
-
-- **框架**: React 18
-- **语言**: TypeScript
-- **UI组件库**: Ant Design 5.x
+- **框架**: React 18 + TypeScript
+- **UI库**: Ant Design
 - **状态管理**: Zustand
-- **路由**: React Router v6
 - **HTTP客户端**: Axios
-- **构建工具**: Create React App
-
-## 📦 安装和运行
-
-### 环境要求
-- Node.js >= 16
-- npm >= 8
-
-### 安装依赖
-```bash
-cd frontend
-npm install
-```
-
-### 开发环境运行
-```bash
-npm start
-```
-
-应用将在 http://localhost:3000 启动
-
-### 生产环境构建
-```bash
-npm run build
-```
-
-构建产物将生成在 `build` 目录中
-
-## 🔧 配置说明
-
-### 环境变量
-创建 `.env` 文件来配置环境变量：
-
-```env
-# API服务器地址
-REACT_APP_API_BASE_URL=http://localhost:8080/api
-
-# 应用标题
-REACT_APP_TITLE=LLM Trace
-
-# 是否启用调试模式
-REACT_APP_DEBUG=true
-```
-
-### API配置
-确保后端API服务器正在运行，默认地址为 `http://localhost:8080/api`
+- **路由**: React Router
+- **构建工具**: Vite
 
 ## 📁 项目结构
 
 ```
-src/
-├── components/          # 通用组件
-│   └── Layout/         # 布局组件
-├── pages/              # 页面组件
-│   ├── Dashboard/      # 仪表盘
-│   ├── Sessions/       # 会话管理
-│   ├── Records/        # 调用记录
-│   └── Settings/       # 系统设置
-├── services/           # API服务
-├── stores/             # 状态管理
-├── types/              # TypeScript类型定义
-├── utils/              # 工具函数
-├── App.tsx             # 主应用组件
-└── index.tsx           # 应用入口
+frontend/src/
+├── components/           # 通用组件
+│   └── Layout/
+│       └── MainLayout.tsx
+├── pages/               # 页面组件
+│   ├── Dashboard/       # 仪表板
+│   │   └── index.tsx
+│   ├── Sessions/        # 生产环境会话管理
+│   │   └── index.tsx
+│   ├── Records/         # 生产环境记录查看
+│   │   ├── index.tsx
+│   │   └── components/
+│   │       ├── RecordDetail.tsx
+│   │       ├── ReplayModal.tsx
+│   │       └── StartDebugModal.tsx (新增)
+│   ├── ReplaySessions/  # 调试会话管理 (新增)
+│   │   ├── index.tsx
+│   │   └── components/
+│   │       └── ReplaySessionItem.tsx
+│   ├── ReplayDebug/     # 调试界面 (新增)
+│   │   ├── index.tsx
+│   │   └── components/
+│   │       ├── DebugChat.tsx
+│   │       ├── DebugInput.tsx
+│   │       └── DebugConfig.tsx
+│   └── Settings/        # 设置页面
+│       └── index.tsx
+├── services/            # API服务
+│   └── api.ts
+├── stores/              # 状态管理
+│   └── index.ts
+├── types/               # 类型定义
+│   └── index.ts
+├── App.tsx              # 主应用组件
+└── index.tsx            # 应用入口
 ```
 
-## 🎨 界面设计
+## 🎨 页面功能设计
 
-### 设计原则
-- **简洁明了**: 界面简洁，信息层次清晰
-- **响应式**: 支持桌面和移动设备
-- **一致性**: 统一的视觉风格和交互模式
-- **可访问性**: 支持键盘导航和屏幕阅读器
+### 1. **Sessions页面** (生产环境会话管理)
+- **功能**: 显示所有生产环境的会话列表
+- **显示内容**: 
+  - 会话名称
+  - 创建时间
+  - 记录数量
+  - 操作按钮
+- **操作**: 
+  - 点击会话进入Records页面
+  - 查看会话详情
 
-### 主题支持
-- 浅色主题（默认）
-- 深色主题
-- 自动主题切换
+### 2. **Records页面** (生产环境记录查看)
+- **功能**: 显示选中会话的所有记录
+- **显示内容**:
+  - 轮次号
+  - 请求内容摘要
+  - 响应状态
+  - 时间戳
+- **操作**:
+  - 查看记录详情
+  - 单次重放（保留功能）
+  - **开始调试**（新增功能）
 
-## 🎯 **特色功能**
+### 3. **ReplaySessions页面** (新增 - 调试会话管理)
+- **功能**: 显示所有调试会话列表
+- **显示内容**:
+  - 调试会话名称
+  - 关联的原始会话
+  - 开始调试的轮次
+  - 调试状态（active/completed）
+  - 创建时间
+- **操作**:
+  - 进入调试界面
+  - 删除调试会话
 
-1. **重放功能** - 可以修改历史请求并重新执行
-2. **多Provider支持** - 支持选择不同的AI服务提供商
-3. **JSON编辑器** - 支持格式化和验证
-4. **复制功能** - 一键复制请求/响应数据
-5. **状态管理** - 实时状态更新和同步
-6. **响应式设计** - 适配各种屏幕尺寸
+### 4. **ReplayDebug页面** (新增 - 调试界面)
+- **功能**: 多轮对话调试界面
+- **界面布局**:
+  - 左侧：调试记录列表（聊天形式）
+  - 右侧：调试配置面板
+  - 底部：输入框和发送按钮
+- **功能特性**:
+  - 实时显示调试结果
+  - 支持修改模型参数
+  - 历史记录查看
+  - 多轮对话支持
 
-## 🔌 API集成
+## 🔧 组件设计
 
-### 主要接口
-- `POST /api/trace` - 埋点数据上报
-- `GET /api/sessions` - 获取会话列表
-- `GET /api/sessions/:id/records` - 获取会话记录
-- `POST /api/records/:id/replay` - 重放记录（支持Provider选择）
-- `DELETE /api/records/:id` - 删除记录
-- `GET /api/providers` - 获取可用的AI Providers
+### 1. **StartDebugModal组件** (新增)
+```typescript
+interface StartDebugModalProps {
+  visible: boolean;
+  record: Record | null;
+  onCancel: () => void;
+  onSuccess: (replaySession: ReplaySession) => void;
+}
+```
+- **功能**: 从生产环境记录开始调试的弹窗
+- **内容**: 
+  - 显示选中的记录信息
+  - 调试会话名称输入
+  - 确认创建调试会话
 
-### 错误处理
-- 统一的错误处理机制
-- 友好的错误提示
-- 网络异常重试
+### 2. **ReplaySessionItem组件** (新增)
+```typescript
+interface ReplaySessionItemProps {
+  replaySession: ReplaySession;
+  onView: (session: ReplaySession) => void;
+  onDelete: (id: string) => void;
+}
+```
+- **功能**: 调试会话列表项组件
+- **显示**: 会话信息和操作按钮
 
-## 🚀 部署
+### 3. **DebugChat组件** (新增)
+```typescript
+interface DebugChatProps {
+  records: ReplayRecord[];
+  loading: boolean;
+}
+```
+- **功能**: 调试聊天记录显示
+- **特性**: 类似微信聊天的界面设计
 
-### 静态文件部署
+### 4. **DebugInput组件** (新增)
+```typescript
+interface DebugInputProps {
+  onSend: (message: string) => void;
+  loading: boolean;
+}
+```
+- **功能**: 调试消息输入组件
+- **特性**: 支持发送调试请求
+
+### 5. **DebugConfig组件** (新增)
+```typescript
+interface DebugConfigProps {
+  config: ReplayConfig;
+  onConfigChange: (config: ReplayConfig) => void;
+}
+```
+- **功能**: 调试配置管理
+- **配置项**: 模型、温度、token数等参数
+
+## 📊 类型定义
+
+### 新增类型
+```typescript
+// 重放会话
+export interface ReplaySession {
+  id: string;
+  name: string;
+  original_session_id: string;
+  start_turn_number: number;
+  status: 'active' | 'completed';
+  created_at: string;
+  updated_at: string;
+}
+
+// 重放记录
+export interface ReplayRecord {
+  id: string;
+  replay_session_id: string;
+  turn_number: number;
+  request: string;
+  response: string;
+  status: string;
+  error_msg: string;
+  provider: string;
+  model: string;
+  config: string;
+  created_at: string;
+}
+
+// 创建重放会话请求
+export interface CreateReplaySessionRequest {
+  original_session_id: string;
+  start_turn_number: number;
+  name?: string;
+}
+
+// 调试重放请求
+export interface ReplayDebugRequest {
+  replay_session_id: string;
+  turn_number: number;
+  request: any;
+  provider?: string;
+  model?: string;
+  config?: any;
+}
+
+// 重放配置
+export interface ReplayConfig {
+  provider: string;
+  model: string;
+  temperature: number;
+  max_tokens: number;
+  top_p: number;
+  frequency_penalty: number;
+  presence_penalty: number;
+}
+```
+
+## 🔌 API服务
+
+### 新增API方法
+```typescript
+export class APIService {
+  // 重放会话管理
+  static async createReplaySession(data: CreateReplaySessionRequest): Promise<APIResponse<ReplaySession>>;
+  static async getReplaySessions(params?: any): Promise<APIResponse<PaginatedResponse<ReplaySession>>>;
+  static async getReplaySession(id: string): Promise<APIResponse<ReplaySession>>;
+  static async deleteReplaySession(id: string): Promise<APIResponse>;
+  
+  // 重放记录管理
+  static async getReplaySessionRecords(sessionId: string, params?: any): Promise<APIResponse<PaginatedResponse<ReplayRecord>>>;
+  
+  // 调试重放
+  static async replayDebug(data: ReplayDebugRequest): Promise<APIResponse<ReplayRecord>>;
+}
+```
+
+## 🗃️ 状态管理
+
+### 新增状态管理
+```typescript
+interface ReplaySessionState {
+  replaySessions: ReplaySession[];
+  currentReplaySession: ReplaySession | null;
+  replayRecords: ReplayRecord[];
+  loading: boolean;
+  pagination: PaginationState;
+  
+  // 方法
+  fetchReplaySessions: (page?: number, pageSize?: number) => Promise<void>;
+  createReplaySession: (data: CreateReplaySessionRequest) => Promise<void>;
+  deleteReplaySession: (id: string) => Promise<void>;
+  fetchReplaySessionRecords: (sessionId: string, page?: number, pageSize?: number) => Promise<void>;
+  replayDebug: (data: ReplayDebugRequest) => Promise<void>;
+}
+```
+
+## 🔄 用户交互流程
+
+### 从生产环境开始调试
+```
+1. 用户在Records页面选择某个轮次
+2. 点击"开始调试"按钮
+3. 弹出StartDebugModal，确认调试参数
+4. 创建ReplaySession，跳转到ReplayDebug页面
+5. 在调试界面进行多轮对话调试
+```
+
+### 管理调试会话
+```
+1. 用户在ReplaySessions页面查看所有调试会话
+2. 点击某个调试会话进入调试界面
+3. 在调试界面查看历史记录，继续调试
+4. 可以删除不需要的调试会话
+```
+
+## 🎨 界面设计要点
+
+### ReplaySessions页面
+- **布局**: 列表形式显示所有调试会话
+- **内容**: 会话名称、关联会话、开始轮次、状态、时间
+- **操作**: 查看调试、删除按钮
+
+### ReplayDebug页面
+- **布局**: 类似聊天应用的界面设计
+- **左侧**: 调试记录列表（类似微信聊天）
+- **右侧**: 调试配置面板（模型、参数设置）
+- **底部**: 输入框和发送按钮
+- **特性**: 实时显示调试结果
+
+## 📋 实现计划
+
+### 第一阶段: 基础架构
+- [ ] 更新类型定义
+- [ ] 更新API服务
+- [ ] 更新状态管理
+
+### 第二阶段: 调试会话管理
+- [ ] 实现ReplaySessions页面
+- [ ] 实现ReplaySessionItem组件
+- [ ] 集成到主导航
+
+### 第三阶段: 开始调试功能
+- [ ] 实现StartDebugModal组件
+- [ ] 在Records页面集成"开始调试"按钮
+- [ ] 实现调试会话创建流程
+
+### 第四阶段: 调试界面
+- [ ] 实现ReplayDebug页面
+- [ ] 实现DebugChat组件
+- [ ] 实现DebugInput组件
+- [ ] 实现DebugConfig组件
+
+### 第五阶段: 优化完善
+- [ ] 界面美化
+- [ ] 用户体验优化
+- [ ] 错误处理
+- [ ] 性能优化
+
+## 🚀 开发指南
+
+### 环境设置
 ```bash
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+
+# 构建生产版本
 npm run build
 ```
 
-将 `build` 目录中的文件部署到Web服务器
+### 开发规范
+- 使用TypeScript进行类型安全开发
+- 遵循React Hooks最佳实践
+- 使用Zustand进行状态管理
+- 使用Ant Design组件库保持UI一致性
 
-### Docker部署
-```dockerfile
-FROM node:16-alpine as builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-RUN npm run build
+### 代码组织
+- 页面组件放在`pages`目录
+- 通用组件放在`components`目录
+- API调用统一在`services/api.ts`
+- 状态管理统一在`stores/index.ts`
+- 类型定义统一在`types/index.ts`
 
-FROM nginx:alpine
-COPY --from=builder /app/build /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
+## 🔗 相关文档
 
-## 🔍 开发指南
-
-### 代码规范
-- 使用ESLint进行代码检查
-- 使用Prettier进行代码格式化
-- 遵循TypeScript最佳实践
-
-### 组件开发
-- 使用函数式组件和Hooks
-- 保持组件的单一职责
-- 合理使用TypeScript类型
-
-### 状态管理
-- 使用Zustand进行全局状态管理
-- 本地状态使用useState
-- 复杂状态逻辑使用useReducer
-
-
-
-## 📝 更新日志
-
-### v1.1.0
-- 新增多Provider支持
-- 重放功能支持选择不同的AI服务
-- 新增Provider管理接口
-- 优化重放模态框界面
-
-### v1.0.0
-- 初始版本发布
-- 基础功能实现
-- 响应式设计支持
-
-## 🤝 贡献指南
-
-1. Fork 项目
-2. 创建功能分支
-3. 提交更改
-4. 推送到分支
-5. 创建 Pull Request
-
-## 📄 许可证
-
-MIT License
-
-## 🆘 支持
-
-如有问题，请提交Issue或联系开发团队。
+- [后端API文档](../README.md)
+- [Ant Design组件库](https://ant.design/components/overview/)
+- [React官方文档](https://react.dev/)
+- [TypeScript官方文档](https://www.typescriptlang.org/)

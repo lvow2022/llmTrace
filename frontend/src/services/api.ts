@@ -8,7 +8,13 @@ import {
   ReplayRequest,
   SessionQueryParams,
   RecordQueryParams,
-  ProviderInfo
+  ProviderInfo,
+  ReplaySession,
+  ReplayRecord,
+  CreateReplaySessionRequest,
+  ReplayDebugRequest,
+  ReplaySessionQueryParams,
+  ReplayRecordQueryParams
 } from '../types';
 
 // 创建axios实例
@@ -73,7 +79,7 @@ export class APIService {
     return response.data;
   }
 
-  // 重放记录
+  // 重放记录（单次重放）
   static async replayRecord(recordId: string, replayData: ReplayRequest): Promise<APIResponse<Record>> {
     const response = await api.post<APIResponse<Record>>(`/records/${recordId}/replay`, replayData);
     return response.data;
@@ -94,6 +100,58 @@ export class APIService {
   // 健康检查
   static async healthCheck(): Promise<APIResponse> {
     const response = await api.get<APIResponse>('/health');
+    return response.data;
+  }
+
+  // ========== 重放会话管理 API ==========
+
+  // 创建重放会话
+  static async createReplaySession(data: CreateReplaySessionRequest): Promise<APIResponse<ReplaySession>> {
+    const response = await api.post<APIResponse<ReplaySession>>('/replay-sessions', data);
+    return response.data;
+  }
+
+  // 获取重放会话列表
+  static async getReplaySessions(params: ReplaySessionQueryParams = {}): Promise<APIResponse<PaginatedResponse<ReplaySession>>> {
+    const response = await api.get<APIResponse<PaginatedResponse<ReplaySession>>>('/replay-sessions', {
+      params: {
+        page: params.page || 1,
+        size: params.size || 20,
+      },
+    });
+    return response.data;
+  }
+
+  // 获取单个重放会话
+  static async getReplaySession(id: string): Promise<APIResponse<ReplaySession>> {
+    const response = await api.get<APIResponse<ReplaySession>>(`/replay-sessions/${id}`);
+    return response.data;
+  }
+
+  // 删除重放会话
+  static async deleteReplaySession(id: string): Promise<APIResponse> {
+    const response = await api.delete<APIResponse>(`/replay-sessions/${id}`);
+    return response.data;
+  }
+
+  // ========== 重放记录管理 API ==========
+
+  // 获取重放会话记录
+  static async getReplaySessionRecords(sessionId: string, params: Partial<ReplayRecordQueryParams> = {}): Promise<APIResponse<PaginatedResponse<ReplayRecord>>> {
+    const response = await api.get<APIResponse<PaginatedResponse<ReplayRecord>>>(`/replay-sessions/${sessionId}/records`, {
+      params: {
+        page: params.page || 1,
+        size: params.size || 50,
+      },
+    });
+    return response.data;
+  }
+
+  // ========== 调试重放 API ==========
+
+  // 调试重放（多轮对话）
+  static async replayDebug(data: ReplayDebugRequest): Promise<APIResponse<ReplayRecord>> {
+    const response = await api.post<APIResponse<ReplayRecord>>('/replay-debug', data);
     return response.data;
   }
 }

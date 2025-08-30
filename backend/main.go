@@ -48,13 +48,23 @@ func setupRoutes(r *gin.Engine) {
 		// 埋点接口
 		api.POST("/trace", handleTrace)
 
-		// 会话管理
+		// 会话管理（生产环境）
 		api.GET("/sessions", handleGetSessions)
 		api.GET("/sessions/:id/records", handleGetSessionRecords)
 
-		// 记录管理
+		// 记录管理（生产环境）
 		api.POST("/records/:id/replay", handleReplayRecord)
 		api.DELETE("/records/:id", handleDeleteRecord)
+
+		// 重放会话管理（调试环境）
+		api.POST("/replay-sessions", handleCreateReplaySession)
+		api.GET("/replay-sessions", handleGetReplaySessions)
+		api.GET("/replay-sessions/:id", handleGetReplaySession)
+		api.GET("/replay-sessions/:id/records", handleGetReplaySessionRecords)
+		api.DELETE("/replay-sessions/:id", handleDeleteReplaySession)
+
+		// 调试重放
+		api.POST("/replay-debug", handleReplayDebug)
 
 		// Provider管理
 		api.GET("/providers", handleGetProviders)

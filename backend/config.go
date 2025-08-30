@@ -31,31 +31,17 @@ type OpenAIConfig struct {
 	APIKey string `mapstructure:"api_key"`
 }
 
-// ModelConfig 模型配置
-type ModelConfig struct {
-	Name    string `mapstructure:"name"`
-	Model   string `mapstructure:"model"`
-	Enabled bool   `mapstructure:"enabled"`
-}
-
 // ProviderConfig 单个Provider配置
 type ProviderConfig struct {
-	Name    string                 `mapstructure:"name"`
-	Type    string                 `mapstructure:"type"` // openai, anthropic, deepseek, etc.
-	APIKey  string                 `mapstructure:"api_key"`
-	BaseURL string                 `mapstructure:"base_url"`
-	Enabled bool                   `mapstructure:"enabled"`
-	Models  map[string]ModelConfig `mapstructure:"models"`
+	Name    string   `mapstructure:"name"`
+	APIKey  string   `mapstructure:"api_key"`
+	BaseURL string   `mapstructure:"base_url"`
+	Enabled bool     `mapstructure:"enabled"`
+	Models  []string `mapstructure:"models"`
 }
 
-// ProvidersConfig 多Provider配置
-type ProvidersConfig struct {
-	OpenAI    ProviderConfig `mapstructure:"openai"`
-	Anthropic ProviderConfig `mapstructure:"anthropic"`
-	Azure     ProviderConfig `mapstructure:"azure"`
-	DeepSeek  ProviderConfig `mapstructure:"deepseek"`
-	Custom    ProviderConfig `mapstructure:"custom"`
-}
+// ProvidersConfig 动态Provider配置
+type ProvidersConfig map[string]ProviderConfig
 
 var config *Config
 

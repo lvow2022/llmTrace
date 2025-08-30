@@ -52,7 +52,7 @@ func initDatabase() error {
 	}
 
 	// 自动迁移表结构
-	if err := db.AutoMigrate(&Session{}, &Record{}); err != nil {
+	if err := db.AutoMigrate(&Session{}, &Record{}, &ReplaySession{}, &ReplayRecord{}); err != nil {
 		return fmt.Errorf("failed to migrate database: %v", err)
 	}
 
@@ -217,4 +217,184 @@ func deleteRecord(recordID string) error {
 		return fmt.Errorf("record not found")
 	}
 	return nil
+}
+
+// createReplaySession 创建重放会话
+func createReplaySession(req *CreateReplaySessionRequest) (*ReplaySession, error) {
+	// 检查原始会话是否存在
+	var originalSession Session
+	if err := db.Where("id = ?", req.OriginalSessionID).First(&originalSession).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("original session not found")
+		}
+		return nil, fmt.Errorf("failed to check original session: %v", err)
+	}
+
+	// 生成会话名称
+	sessionName := req.Name
+	if sessionName == "" {
+		sessionName = fmt.Sprintf("调试-%s-轮次%d", originalSession.Name, req.StartTurnNumber)
+	}
+
+	// 创建重放会话
+	replaySession := &ReplaySession{
+		ID:                uuid.New().String(),
+		Name:              sessionName,
+		OriginalSessionID: req.OriginalSessionID,
+		StartTurnNumber:   req.StartTurnNumber,
+		Status:            "active",
+	}
+
+	if err := db.Create(replaySession).Error; err != nil {
+		return nil, fmt.Errorf("failed to create replay session: %v", err)
+	}
+
+	return replaySession, nil
+}
+
+// getReplaySessions 获取重放会话列表
+func getReplaySessions(page, size int) (*PaginatedResponse, error) {
+	var total int64
+	if err := db.Model(&ReplaySession{}).Count(&total).Error; err != nil {
+		return nil, fmt.Errorf("failed to count replay sessions: %v", err)
+	}
+
+	var replaySessions []ReplaySession
+	offset := (page - 1) * size
+	if err := db.Order("created_at DESC").Offset(offset).Limit(size).Find(&replaySessions).Error; err != nil {
+		return nil, fmt.Errorf("failed to query replay sessions: %v", err)
+	}
+
+	totalPages := int((total + int64(size) - 1) / int64(size))
+
+	return &PaginatedResponse{
+		Data:       replaySessions,
+		Total:      int(total),
+		Page:       page,
+		Size:       size,
+		TotalPages: totalPages,
+	}, nil
+}
+
+// getReplaySession 获取单个重放会话
+func getReplaySession(sessionID string) (*ReplaySession, error) {
+	var replaySession ReplaySession
+	if err := db.Where("id = ?", sessionID).First(&replaySession).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get replay session: %v", err)
+	}
+	return &replaySession, nil
+}
+
+// getReplaySessionRecords 获取重放会话记录
+func getReplaySessionRecords(sessionID string, page, size int) (*PaginatedResponse, error) {
+	var total int64
+	if err := db.Model(&ReplayRecord{}).Where("replay_session_id = ?", sessionID).Count(&total).Error; err != nil {
+		return nil, fmt.Errorf("failed to count replay records: %v", err)
+	}
+
+	var replayRecords []ReplayRecord
+	offset := (page - 1) * size
+	if err := db.Where("replay_session_id = ?", sessionID).
+		Order("turn_number ASC, created_at ASC").
+		Offset(offset).Limit(size).Find(&replayRecords).Error; err != nil {
+		return nil, fmt.Errorf("failed to query replay records: %v", err)
+	}
+
+	totalPages := int((total + int64(size) - 1) / int64(size))
+
+	return &PaginatedResponse{
+		Data:       replayRecords,
+		Total:      int(total),
+		Page:       page,
+		Size:       size,
+		TotalPages: totalPages,
+	}, nil
+}
+
+// saveReplayRecord 保存重放记录
+func saveReplayRecord(replaySessionID string, turnNumber int, request interface{}, response interface{}, status string, errorMsg string, provider string, model string, config interface{}) error {
+	// 序列化数据
+	requestJSON, err := json.Marshal(request)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %v", err)
+	}
+
+	var responseJSON []byte
+	if response != nil {
+		responseJSON, err = json.Marshal(response)
+		if err != nil {
+			return fmt.Errorf("failed to marshal response: %v", err)
+		}
+	}
+
+	var configJSON []byte
+	if config != nil {
+		configJSON, err = json.Marshal(config)
+		if err != nil {
+			return fmt.Errorf("failed to marshal config: %v", err)
+		}
+	}
+
+	// 创建重放记录
+	replayRecord := &ReplayRecord{
+		ID:              uuid.New().String(),
+		ReplaySessionID: replaySessionID,
+		TurnNumber:      turnNumber,
+		Request:         string(requestJSON),
+		Response:        string(responseJSON),
+		Status:          status,
+		ErrorMsg:        errorMsg,
+		Provider:        provider,
+		Model:           model,
+		Config:          string(configJSON),
+	}
+
+	if err := db.Create(replayRecord).Error; err != nil {
+		return fmt.Errorf("failed to create replay record: %v", err)
+	}
+
+	return nil
+}
+
+// updateReplaySessionStatus 更新重放会话状态
+func updateReplaySessionStatus(sessionID string, status string) error {
+	result := db.Model(&ReplaySession{}).Where("id = ?", sessionID).Update("status", status)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update replay session status: %v", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("replay session not found")
+	}
+	return nil
+}
+
+// deleteReplaySession 删除重放会话
+func deleteReplaySession(sessionID string) error {
+	// 开始事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 删除相关的重放记录
+	if err := tx.Where("replay_session_id = ?", sessionID).Delete(&ReplayRecord{}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete replay records: %v", err)
+	}
+
+	// 删除重放会话
+	if err := tx.Where("id = ?", sessionID).Delete(&ReplaySession{}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete replay session: %v", err)
+	}
+
+	return tx.Commit().Error
 }
