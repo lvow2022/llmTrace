@@ -38,6 +38,10 @@ interface ReplayModalProps {
   record: Record | null;
   onCancel: () => void;
   onSuccess: () => void;
+  // 新增：调试会话相关属性
+  debugMode?: boolean; // 是否为调试模式
+  debugSessionId?: string; // 调试会话ID
+  onDebugSessionUpdate?: (sessionId: string) => void; // 调试会话更新回调
 }
 
 const ReplayModal: React.FC<ReplayModalProps> = ({
@@ -45,6 +49,9 @@ const ReplayModal: React.FC<ReplayModalProps> = ({
   record,
   onCancel,
   onSuccess,
+  debugMode = false,
+  debugSessionId,
+  onDebugSessionUpdate,
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -54,6 +61,10 @@ const ReplayModal: React.FC<ReplayModalProps> = ({
   const [selectedProvider, setSelectedProvider] = useState<string>('');
   const [availableModels, setAvailableModels] = useState<{ name: string; model: string; enabled: boolean }[]>([]);
   const [defaultConfig, setDefaultConfig] = useState<ReplayConfig | null>(null);
+  
+  // 调试会话相关状态
+  const [debugHistory, setDebugHistory] = useState<any[]>([]);
+  const [isDebugSession, setIsDebugSession] = useState<boolean>(false);
 
   useEffect(() => {
     if (record && visible) {
@@ -184,7 +195,7 @@ const ReplayModal: React.FC<ReplayModalProps> = ({
     }
   };
 
-  // 提交重放请求
+  // 提交重放/调试请求
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
@@ -226,8 +237,8 @@ const ReplayModal: React.FC<ReplayModalProps> = ({
 
       // 构建重放请求
       const replayRequest: ReplayRequest = {
-        session_id: record.session_id,
-        turn_number: record.turn_number,
+        session_id: debugMode ? (debugSessionId || record.session_id) : record.session_id,
+        turn_number: debugMode ? (debugHistory.length + 1) : record.turn_number,
         request: requestData,
         provider: values.provider,
         model: values.model,
@@ -242,14 +253,54 @@ const ReplayModal: React.FC<ReplayModalProps> = ({
       const response = await APIService.replayRecord(record.id, replayRequest);
       
       if (response.success) {
-        message.success('重放请求执行成功');
+        const successMessage = debugMode ? '调试请求执行成功' : '重放请求执行成功';
+        message.success(successMessage);
+        
+                  // 如果是调试模式，更新调试历史
+          if (debugMode) {
+            const newHistoryItem = {
+              status: 'success',
+              duration: response.data?.duration || '未知',
+              timestamp: new Date().toLocaleString(),
+            };
+            setDebugHistory([...debugHistory, newHistoryItem]);
+            
+            // 更新调试会话ID（如果是第一次）
+            if (!debugSessionId) {
+              const newSessionId = `debug_${Date.now()}`;
+              onDebugSessionUpdate?.(newSessionId);
+            }
+          }
+        
         onSuccess();
       } else {
-        message.error(response.message || '重放失败');
+        const errorMessage = debugMode ? '调试失败' : '重放失败';
+        message.error(response.message || errorMessage);
+        
+        // 如果是调试模式，记录错误历史
+        if (debugMode) {
+          const errorHistoryItem = {
+            status: 'error',
+            error: response.message || '未知错误',
+            timestamp: new Date().toLocaleString(),
+          };
+          setDebugHistory([...debugHistory, errorHistoryItem]);
+        }
       }
     } catch (error) {
       console.error('Replay error:', error);
-      message.error('重放请求失败');
+      const errorMessage = debugMode ? '调试请求失败' : '重放请求失败';
+      message.error(errorMessage);
+      
+      // 如果是调试模式，记录错误历史
+      if (debugMode) {
+        const errorHistoryItem = {
+          status: 'error',
+          error: error instanceof Error ? error.message : '未知错误',
+          timestamp: new Date().toLocaleString(),
+        };
+        setDebugHistory([...debugHistory, errorHistoryItem]);
+      }
     } finally {
       setLoading(false);
     }
@@ -260,7 +311,12 @@ const ReplayModal: React.FC<ReplayModalProps> = ({
       title={
         <Space>
           <ReloadOutlined />
-          <span>重放请求</span>
+          <span>{debugMode ? '调试会话' : '重放请求'}</span>
+          {debugMode && debugSessionId && (
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              (会话ID: {debugSessionId})
+            </Text>
+          )}
         </Space>
       }
       open={visible}
@@ -277,7 +333,7 @@ const ReplayModal: React.FC<ReplayModalProps> = ({
           onClick={handleSubmit}
           icon={<ReloadOutlined />}
         >
-          执行重放
+          {debugMode ? '继续调试' : '执行重放'}
         </Button>,
       ]}
     >
@@ -311,6 +367,42 @@ const ReplayModal: React.FC<ReplayModalProps> = ({
               )}
             </Space>
           </Card>
+
+          {/* 调试会话历史记录 */}
+          {debugMode && debugHistory.length > 0 && (
+            <>
+              <Card size="small" style={{ marginBottom: 16 }}>
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <div>
+                    <Text strong>调试历史：</Text>
+                  </div>
+                  {debugHistory.map((item, index) => (
+                    <div key={index} style={{ 
+                      padding: '8px', 
+                      border: '1px solid #d9d9d9', 
+                      borderRadius: '4px',
+                      backgroundColor: '#fafafa'
+                    }}>
+                      <div>
+                        <Text type="secondary">轮次 {index + 1}: </Text>
+                        <Text code>{item.status}</Text>
+                      </div>
+                      {item.error && (
+                        <div>
+                          <Text type="danger">错误: {item.error}</Text>
+                        </div>
+                      )}
+                      <div>
+                        <Text type="secondary">耗时: </Text>
+                        <Text code>{item.duration}</Text>
+                      </div>
+                    </div>
+                  ))}
+                </Space>
+              </Card>
+              <Divider />
+            </>
+          )}
 
           <Divider />
 

@@ -65,6 +65,10 @@ const Records: React.FC = () => {
   const [replayRecord, setReplayRecord] = useState<Record | null>(null);
   const [startDebugModalVisible, setStartDebugModalVisible] = useState(false);
   const [debugRecord, setDebugRecord] = useState<Record | null>(null);
+  
+  // 调试会话相关状态
+  const [debugMode, setDebugMode] = useState<boolean>(false);
+  const [debugSessionId, setDebugSessionId] = useState<string>('');
 
   // 从URL参数获取会话ID
   const sessionIdFromUrl = searchParams.get('session_id');
@@ -218,9 +222,9 @@ const Records: React.FC = () => {
             type="link"
             size="small"
             icon={<PlayCircleOutlined />}
-            onClick={() => handleStartDebug(record)}
+            onClick={() => handleStartDebugRecord(record)}
           >
-            开始调试
+            调试
           </Button>
           <Button
             type="link"
@@ -246,6 +250,14 @@ const Records: React.FC = () => {
   const handleReplayRecord = (record: Record) => {
     setReplayRecord(record);
     setReplayModalVisible(true);
+    setDebugMode(false); // 默认为重放模式
+  };
+
+  // 开始调试记录
+  const handleStartDebugRecord = (record: Record) => {
+    setReplayRecord(record);
+    setReplayModalVisible(true);
+    setDebugMode(true); // 设置为调试模式
   };
 
   // 开始调试
@@ -431,6 +443,17 @@ const Records: React.FC = () => {
             >
               重放
             </Button>
+            <Button 
+              icon={<PlayCircleOutlined />}
+              onClick={() => {
+                if (selectedRecord) {
+                  setDetailDrawerVisible(false);
+                  handleStartDebugRecord(selectedRecord);
+                }
+              }}
+            >
+              调试
+            </Button>
           </Space>
         }
       >
@@ -439,22 +462,35 @@ const Records: React.FC = () => {
         )}
       </Drawer>
 
-      {/* 重放模态框 */}
+      {/* 重放/调试模态框 */}
       <ReplayModal
         visible={replayModalVisible}
         record={replayRecord}
+        debugMode={debugMode}
+        debugSessionId={debugSessionId}
         onCancel={() => {
           setReplayModalVisible(false);
           setReplayRecord(null);
+          setDebugMode(false);
+          setDebugSessionId('');
         }}
         onSuccess={() => {
-          setReplayModalVisible(false);
-          setReplayRecord(null);
-          message.success('重放成功');
-          // 刷新记录列表
-          if (currentSession) {
-            fetchRecords(currentSession.id, pagination.current, pagination.pageSize);
+          if (debugMode) {
+            // 调试模式：保持模态框打开，继续调试
+            message.success('调试请求执行成功');
+          } else {
+            // 重放模式：关闭模态框
+            setReplayModalVisible(false);
+            setReplayRecord(null);
+            message.success('重放成功');
+            // 刷新记录列表
+            if (currentSession) {
+              fetchRecords(currentSession.id, pagination.current, pagination.pageSize);
+            }
           }
+        }}
+        onDebugSessionUpdate={(sessionId: string) => {
+          setDebugSessionId(sessionId);
         }}
       />
 
