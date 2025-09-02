@@ -51,27 +51,28 @@ func setupRoutes(r *gin.Engine) {
 		// 埋点接口
 		api.POST("/trace", handlers.HandleTrace)
 
-		// 会话管理
+		// session 管理
 		api.GET("/sessions", handlers.HandleGetSessions)                   // 获取会话列表
 		api.GET("/sessions/:id/records", handlers.HandleGetSessionRecords) //获取指定会话的记录
 
-		// 记录管理
-		api.GET("/records/:id", handlers.HandleGetRecord)            //获取单条记录详情
-		api.POST("/records/:id/replay", handlers.HandleReplayRecord) //重放单条记录
-		api.DELETE("/records/:id", handlers.HandleDeleteRecord)      //删除记录
+		// record 管理
+		api.GET("/records/:id", handlers.HandleGetRecord) //获取单条记录详情
 
 		// Playground 管理
-		api.POST("/playground", handlers.HandleCreatePlaygroundSession)       // 创建 playground 会话
-		api.GET("/playground", handlers.HandleGetPlaygroundSessions)          // 获取 playground 会话列表
-		api.GET("/playground/:id", handlers.HandleGetPlaygroundSession)       // 获取 playground 会话详情
-		api.DELETE("/playground/:id", handlers.HandleDeletePlaygroundSession) // 删除 playground 会话
+		api.POST("/playground", handlers.HandleCreatePlayground)       // 创建 playground
+		api.GET("/playground", handlers.HandleGetPlaygrounds)          // 获取 playground 列表
+		api.GET("/playground/:id", handlers.HandleGetPlayground)       // 获取 playground 详情
+		api.DELETE("/playground/:id", handlers.HandleDeletePlayground) // 删除 playground
 
-		// Playground 记录管理
-		api.POST("/playground/:id/records", handlers.HandleCreatePlaygroundRecord)     // 在指定 playground 中创建记录
-		api.GET("/playground/:id/records", handlers.HandleGetPlaygroundSessionRecords) // 获取 playground 会话的所有记录
+		// Debug Session 管理（在 playground 中）
+		api.GET("/playground/:playground_id/session", handlers.HandleGetDebugSessions)          // 获取调试会话列表
+		api.GET("/playground/:playground_id/session/:id", handlers.HandleGetDebugSession)       // 获取调试会话详情（包含所有记录）
+		api.DELETE("/playground/:playground_id/session/:id", handlers.HandleDeleteDebugSession) // 删除调试会话
 
-		// Playground 调试
-		api.POST("/playground-sessions/:id/debug", handlers.HandlePlaygroundDebug) //在指定的 playground 中执行调试
+		// 直接从 trace_record 创建 debug_session（新增）
+		api.POST("/records/:record_id/create-debug-session", handlers.HandleCreateDebugSessionFromRecord) // 从记录创建调试会话
+
+		api.POST("/playground/:playground_id/session/:debug_session_id/debug", handlers.HandlePlaygroundDebug) // 执行调试
 
 		// Provider管理
 		api.GET("/providers", handlers.HandleGetProviders)
