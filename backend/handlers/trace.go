@@ -2,11 +2,12 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
+	"llmTrace/models"
 )
 
 // TraceRequest 埋点请求结构
 type TraceRequest struct {
-	SessionID    string      `json:"session_id" binding:"required"`
+	TraceID      string      `json:"trace_id" binding:"required"`
 	TurnNumber   int         `json:"turn_number" binding:"required"`
 	Request      interface{} `json:"request" binding:"required"`
 	Response     interface{} `json:"response"`
@@ -24,7 +25,7 @@ func HandleTrace(c *gin.Context) {
 	}
 
 	// 保存埋点数据
-	if err := saveTraceData(&trace); err != nil {
+	if err := saveTraceRecord(&trace); err != nil {
 		sendInternalServerError(c, "Failed to save trace data: "+err.Error())
 		return
 	}
@@ -32,9 +33,7 @@ func HandleTrace(c *gin.Context) {
 	sendSuccessMessage(c, "Trace data saved successfully")
 }
 
-// saveTraceData 保存埋点数据（需要从models.go中导入）
-func saveTraceData(trace *TraceRequest) error {
-	// 这里需要调用models.go中的saveTraceData函数
-	// 暂时返回nil，后续需要重构
-	return nil
+// saveTraceRecord 保存埋点数据
+func saveTraceRecord(trace *TraceRequest) error {
+	return models.SaveTraceRecord(trace.TraceID, trace.TurnNumber, trace.Request, trace.Response, trace.Status, trace.ErrorMessage, trace.Metadata)
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"llmTrace/models"
 	"log"
 
 	"llmTrace/handlers"
@@ -15,7 +16,7 @@ func main() {
 	cfg := GetConfig()
 
 	// 初始化数据库
-	if err := initDatabase(); err != nil {
+	if err := models.InitDatabase(cfg.Database.Driver, cfg.Database.DSN); err != nil {
 		log.Fatal("Failed to initialize database:", err)
 	}
 
@@ -50,27 +51,27 @@ func setupRoutes(r *gin.Engine) {
 		// 埋点接口
 		api.POST("/trace", handlers.HandleTrace)
 
-		// 会话管理（生产环境）
-		api.GET("/sessions", handlers.HandleGetSessions)
-		api.GET("/sessions/:id/records", handlers.HandleGetSessionRecords)
+		// 会话管理
+		api.GET("/sessions", handlers.HandleGetSessions)                   // 获取会话列表
+		api.GET("/sessions/:id/records", handlers.HandleGetSessionRecords) //获取指定会话的记录
 
-		// 记录管理（生产环境）
-		api.GET("/records/:id", handlers.HandleGetRecord)
-		api.POST("/records/:id/replay", handlers.HandleReplayRecord)
-		api.DELETE("/records/:id", handlers.HandleDeleteRecord)
+		// 记录管理
+		api.GET("/records/:id", handlers.HandleGetRecord)            //获取单条记录详情
+		api.POST("/records/:id/replay", handlers.HandleReplayRecord) //重放单条记录
+		api.DELETE("/records/:id", handlers.HandleDeleteRecord)      //删除记录
 
-		// Playground 管理（新的调试环境）
-		api.POST("/playground-sessions", handlers.HandleCreatePlaygroundSession)
-		api.GET("/playground-sessions", handlers.HandleGetPlaygroundSessions)
-		api.GET("/playground-sessions/:id", handlers.HandleGetPlaygroundSession)
-		api.DELETE("/playground-sessions/:id", handlers.HandleDeletePlaygroundSession)
+		// Playground 管理
+		api.POST("/playground", handlers.HandleCreatePlaygroundSession)       // 创建 playground 会话
+		api.GET("/playground", handlers.HandleGetPlaygroundSessions)          // 获取 playground 会话列表
+		api.GET("/playground/:id", handlers.HandleGetPlaygroundSession)       // 获取 playground 会话详情
+		api.DELETE("/playground/:id", handlers.HandleDeletePlaygroundSession) // 删除 playground 会话
 
 		// Playground 记录管理
-		api.POST("/playground-sessions/:id/records", handlers.HandleCreatePlaygroundRecord)
-		api.GET("/playground-sessions/:id/records", handlers.HandleGetPlaygroundSessionRecords)
+		api.POST("/playground/:id/records", handlers.HandleCreatePlaygroundRecord)     // 在指定 playground 中创建记录
+		api.GET("/playground/:id/records", handlers.HandleGetPlaygroundSessionRecords) // 获取 playground 会话的所有记录
 
 		// Playground 调试
-		api.POST("/playground-sessions/:id/debug", handlers.HandlePlaygroundDebug)
+		api.POST("/playground-sessions/:id/debug", handlers.HandlePlaygroundDebug) //在指定的 playground 中执行调试
 
 		// Provider管理
 		api.GET("/providers", handlers.HandleGetProviders)

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"llmTrace/models"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -199,31 +200,63 @@ func HandlePlaygroundDebug(c *gin.Context) {
 	sendSuccessResponse(c, result)
 }
 
-// 以下函数需要从models.go中导入
+// 以下函数调用 models 包中的相应函数
 func createPlaygroundSession(req *CreatePlaygroundRequest) (interface{}, error) {
+	// TODO: 需要从请求中获取原始会话ID和轮次
+	// 暂时返回nil，需要重构请求结构
 	return nil, nil
 }
 
 func getPlaygroundSessions(page, size int) (interface{}, error) {
-	return nil, nil
+	playgroundSessions, total, err := models.GetPlaygroundSessions(page, size)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPages := int((total + int64(size) - 1) / int64(size))
+
+	return &PaginatedResponse{
+		Data:       playgroundSessions,
+		Total:      int(total),
+		Page:       page,
+		Size:       size,
+		TotalPages: totalPages,
+	}, nil
 }
 
 func getPlaygroundSession(sessionID string) (interface{}, error) {
-	return nil, nil
+	return models.GetPlaygroundSession(sessionID)
 }
 
 func getPlaygroundSessionRecords(sessionID string, page, size int) (interface{}, error) {
-	return nil, nil
+	playgroundRecords, total, err := models.GetPlaygroundSessionRecords(sessionID, page, size)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPages := int((total + int64(size) - 1) / int64(size))
+
+	return &PaginatedResponse{
+		Data:       playgroundRecords,
+		Total:      int(total),
+		Page:       page,
+		Size:       size,
+		TotalPages: totalPages,
+	}, nil
 }
 
 func deletePlaygroundSession(sessionID string) error {
-	return nil
+	return models.DeletePlaygroundSession(sessionID)
 }
 
 func createPlaygroundRecord(playgroundSessionID string, req *CreatePlaygroundRecordRequest) (interface{}, error) {
+	// TODO: 需要从请求中获取原始记录ID
+	// 暂时返回nil，需要重构请求结构
 	return nil, nil
 }
 
 func executePlaygroundDebug(playgroundSessionID string, turnNumber int, newRequest interface{}, provider string, model string, config interface{}) (interface{}, error) {
+	// TODO: 需要获取 provider 配置
+	// 暂时返回nil，需要重构
 	return nil, nil
 }

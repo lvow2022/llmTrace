@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"llmTrace/models"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -110,24 +111,20 @@ func HandleDeleteRecord(c *gin.Context) {
 	sendSuccessMessage(c, "Record deleted successfully")
 }
 
-// getRecord 获取记录（需要从models.go中导入）
+// getRecord 获取记录
 func getRecord(recordID string) (interface{}, error) {
-	// 这里需要调用models.go中的getRecord函数
-	// 暂时返回nil，后续需要重构
-	return nil, nil
+	return models.GetRecord(recordID)
 }
 
-// deleteRecord 删除记录（需要从models.go中导入）
+// deleteRecord 删除记录
 func deleteRecord(recordID string) error {
-	// 这里需要调用models.go中的deleteRecord函数
-	// 暂时返回nil，后续需要重构
-	return nil
+	return models.DeleteRecord(recordID)
 }
 
-// executeReplay 执行重放（需要从models.go中导入）
+// executeReplay 执行重放
 func executeReplay(sessionID string, turnNumber int, newRequest interface{}, provider string, model string) (interface{}, error) {
-	// 这里需要调用models.go中的executeReplay函数
-	// 暂时返回nil，后续需要重构
+	// 这里需要实现重放逻辑，暂时返回nil
+	// TODO: 实现重放功能
 	return nil, nil
 }
 

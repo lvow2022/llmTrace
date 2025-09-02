@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"llmTrace/models"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -162,27 +163,57 @@ func HandleDeleteReplaySession(c *gin.Context) {
 	sendSuccessMessage(c, "Replay session deleted successfully")
 }
 
-// 以下函数需要从models.go中导入
+// 以下函数调用 models 包中的相应函数
 func createReplaySession(req *CreateReplaySessionRequest) (interface{}, error) {
+	// TODO: 需要从请求中获取原始会话ID和轮次
+	// 暂时返回nil，需要重构请求结构
 	return nil, nil
 }
 
 func getReplaySessions(page, size int) (interface{}, error) {
-	return nil, nil
+	replaySessions, total, err := models.GetReplaySessions(page, size)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPages := int((total + int64(size) - 1) / int64(size))
+
+	return &PaginatedResponse{
+		Data:       replaySessions,
+		Total:      int(total),
+		Page:       page,
+		Size:       size,
+		TotalPages: totalPages,
+	}, nil
 }
 
 func getReplaySession(sessionID string) (interface{}, error) {
-	return nil, nil
+	return models.GetReplaySession(sessionID)
 }
 
 func getReplaySessionRecords(sessionID string, page, size int) (interface{}, error) {
-	return nil, nil
+	replayRecords, total, err := models.GetReplaySessionRecords(sessionID, page, size)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPages := int((total + int64(size) - 1) / int64(size))
+
+	return &PaginatedResponse{
+		Data:       replayRecords,
+		Total:      int(total),
+		Page:       page,
+		Size:       size,
+		TotalPages: totalPages,
+	}, nil
 }
 
 func deleteReplaySession(sessionID string) error {
-	return nil
+	return models.DeleteReplaySession(sessionID)
 }
 
 func executeReplayDebug(replaySessionID string, turnNumber int, newRequest interface{}, provider string, model string, config interface{}) (interface{}, error) {
+	// TODO: 需要实现重放调试逻辑
+	// 暂时返回nil，需要重构
 	return nil, nil
 }

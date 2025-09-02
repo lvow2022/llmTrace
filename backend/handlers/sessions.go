@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"llmTrace/models"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -38,16 +40,38 @@ func HandleGetSessionRecords(c *gin.Context) {
 	sendSuccessResponse(c, result)
 }
 
-// getSessions 获取会话列表（需要从models.go中导入）
+// getSessions 获取会话列表
 func getSessions(page, size int) (interface{}, error) {
-	// 这里需要调用models.go中的getSessions函数
-	// 暂时返回nil，后续需要重构
-	return nil, nil
+	sessions, total, err := models.GetSessions(page, size)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPages := int((total + int64(size) - 1) / int64(size))
+
+	return &PaginatedResponse{
+		Data:       sessions,
+		Total:      int(total),
+		Page:       page,
+		Size:       size,
+		TotalPages: totalPages,
+	}, nil
 }
 
-// getSessionRecords 获取会话记录（需要从models.go中导入）
+// getSessionRecords 获取会话记录
 func getSessionRecords(sessionID string, page, size int) (interface{}, error) {
-	// 这里需要调用models.go中的getSessionRecords函数
-	// 暂时返回nil，后续需要重构
-	return nil, nil
+	records, total, err := models.GetSessionRecords(sessionID, page, size)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPages := int((total + int64(size) - 1) / int64(size))
+
+	return &PaginatedResponse{
+		Data:       records,
+		Total:      int(total),
+		Page:       page,
+		Size:       size,
+		TotalPages: totalPages,
+	}, nil
 }
