@@ -57,16 +57,6 @@ func setupRoutes(r *gin.Engine) {
 		api.POST("/records/:id/replay", handleReplayRecord)
 		api.DELETE("/records/:id", handleDeleteRecord)
 
-		// 重放会话管理（调试环境）
-		api.POST("/replay-sessions", handleCreateReplaySession)
-		api.GET("/replay-sessions", handleGetReplaySessions)
-		api.GET("/replay-sessions/:id", handleGetReplaySession)
-		api.GET("/replay-sessions/:id/records", handleGetReplaySessionRecords)
-		api.DELETE("/replay-sessions/:id", handleDeleteReplaySession)
-
-		// 调试重放
-		api.POST("/replay-debug", handleReplayDebug)
-
 		// Playground 管理（新的调试环境）
 		api.POST("/playground-sessions", handleCreatePlaygroundSession)
 		api.GET("/playground-sessions", handleGetPlaygroundSessions)
