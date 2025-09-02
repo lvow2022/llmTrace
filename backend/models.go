@@ -52,7 +52,7 @@ func initDatabase() error {
 	}
 
 	// 自动迁移表结构
-	if err := db.AutoMigrate(&Session{}, &Record{}, &ReplaySession{}, &ReplayRecord{}); err != nil {
+	if err := db.AutoMigrate(&Session{}, &Record{}, &ReplaySession{}, &ReplayRecord{}, &PlaygroundSession{}, &PlaygroundRecord{}); err != nil {
 		return fmt.Errorf("failed to migrate database: %v", err)
 	}
 
@@ -394,6 +394,187 @@ func deleteReplaySession(sessionID string) error {
 	if err := tx.Where("id = ?", sessionID).Delete(&ReplaySession{}).Error; err != nil {
 		tx.Rollback()
 		return fmt.Errorf("failed to delete replay session: %v", err)
+	}
+
+	return tx.Commit().Error
+}
+
+// createPlaygroundSession 创建 Playground 会话
+func createPlaygroundSession(req *CreatePlaygroundRequest) (*PlaygroundSession, error) {
+	// 获取原始记录信息
+	var originalRecord Record
+	if err := db.Where("id = ?", req.OriginalRecordID).First(&originalRecord).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("original record not found")
+		}
+		return nil, fmt.Errorf("failed to get original record: %v", err)
+	}
+
+	// 生成会话名称
+	sessionName := req.Name
+	if sessionName == "" {
+		sessionName = fmt.Sprintf("Playground-%s-轮次%d", time.Now().Format("01-02 15:04"), originalRecord.TurnNumber)
+	}
+
+	// 创建 Playground 会话
+	playgroundSession := &PlaygroundSession{
+		ID:                 uuid.New().String(),
+		Name:               sessionName,
+		OriginalRecordID:   req.OriginalRecordID,
+		OriginalSessionID:  originalRecord.SessionID,
+		OriginalTurnNumber: originalRecord.TurnNumber,
+		Status:             "active",
+	}
+
+	if err := db.Create(playgroundSession).Error; err != nil {
+		return nil, fmt.Errorf("failed to create playground session: %v", err)
+	}
+
+	return playgroundSession, nil
+}
+
+// getPlaygroundSessions 获取 Playground 会话列表
+func getPlaygroundSessions(page, size int) (*PaginatedResponse, error) {
+	var total int64
+	if err := db.Model(&PlaygroundSession{}).Count(&total).Error; err != nil {
+		return nil, fmt.Errorf("failed to count playground sessions: %v", err)
+	}
+
+	var playgroundSessions []PlaygroundSession
+	offset := (page - 1) * size
+	if err := db.Order("created_at DESC").Offset(offset).Limit(size).Find(&playgroundSessions).Error; err != nil {
+		return nil, fmt.Errorf("failed to query playground sessions: %v", err)
+	}
+
+	totalPages := int((total + int64(size) - 1) / int64(size))
+
+	return &PaginatedResponse{
+		Data:       playgroundSessions,
+		Total:      int(total),
+		Page:       page,
+		Size:       size,
+		TotalPages: totalPages,
+	}, nil
+}
+
+// getPlaygroundSession 获取单个 Playground 会话
+func getPlaygroundSession(sessionID string) (*PlaygroundSession, error) {
+	var playgroundSession PlaygroundSession
+	if err := db.Where("id = ?", sessionID).First(&playgroundSession).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get playground session: %v", err)
+	}
+	return &playgroundSession, nil
+}
+
+// getPlaygroundSessionRecords 获取 Playground 会话记录
+func getPlaygroundSessionRecords(sessionID string, page, size int) (*PaginatedResponse, error) {
+	var total int64
+	if err := db.Model(&PlaygroundRecord{}).Where("playground_session_id = ?", sessionID).Count(&total).Error; err != nil {
+		return nil, fmt.Errorf("failed to count playground records: %v", err)
+	}
+
+	var playgroundRecords []PlaygroundRecord
+	offset := (page - 1) * size
+	if err := db.Where("playground_session_id = ?", sessionID).
+		Order("test_number ASC, created_at ASC").
+		Offset(offset).Limit(size).Find(&playgroundRecords).Error; err != nil {
+		return nil, fmt.Errorf("failed to query playground records: %v", err)
+	}
+
+	totalPages := int((total + int64(size) - 1) / int64(size))
+
+	return &PaginatedResponse{
+		Data:       playgroundRecords,
+		Total:      int(total),
+		Page:       page,
+		Size:       size,
+		TotalPages: totalPages,
+	}, nil
+}
+
+// savePlaygroundRecord 保存 Playground 记录
+func savePlaygroundRecord(playgroundSessionID string, testNumber int, request interface{}, response interface{}, status string, errorMsg string, provider string, model string, config interface{}) error {
+	// 序列化数据
+	requestJSON, err := json.Marshal(request)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %v", err)
+	}
+
+	var responseJSON []byte
+	if response != nil {
+		responseJSON, err = json.Marshal(response)
+		if err != nil {
+			return fmt.Errorf("failed to marshal response: %v", err)
+		}
+	}
+
+	var configJSON []byte
+	if config != nil {
+		configJSON, err = json.Marshal(config)
+		if err != nil {
+			return fmt.Errorf("failed to marshal config: %v", err)
+		}
+	}
+
+	// 创建 Playground 记录
+	playgroundRecord := &PlaygroundRecord{
+		ID:                  uuid.New().String(),
+		PlaygroundSessionID: playgroundSessionID,
+		TestNumber:          testNumber,
+		Request:             string(requestJSON),
+		Response:            string(responseJSON),
+		Status:              status,
+		ErrorMsg:            errorMsg,
+		Provider:            provider,
+		Model:               model,
+		Config:              string(configJSON),
+	}
+
+	if err := db.Create(playgroundRecord).Error; err != nil {
+		return fmt.Errorf("failed to create playground record: %v", err)
+	}
+
+	return nil
+}
+
+// getNextTestNumber 获取下一个测试编号
+func getNextTestNumber(playgroundSessionID string) (int, error) {
+	var maxTestNumber int
+	if err := db.Model(&PlaygroundRecord{}).
+		Where("playground_session_id = ?", playgroundSessionID).
+		Select("COALESCE(MAX(test_number), 0)").
+		Scan(&maxTestNumber).Error; err != nil {
+		return 0, fmt.Errorf("failed to get max test number: %v", err)
+	}
+	return maxTestNumber + 1, nil
+}
+
+// deletePlaygroundSession 删除 Playground 会话
+func deletePlaygroundSession(sessionID string) error {
+	// 开始事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 删除相关的 Playground 记录
+	if err := tx.Where("playground_session_id = ?", sessionID).Delete(&PlaygroundRecord{}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete playground records: %v", err)
+	}
+
+	// 删除 Playground 会话
+	if err := tx.Where("id = ?", sessionID).Delete(&PlaygroundSession{}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete playground session: %v", err)
 	}
 
 	return tx.Commit().Error

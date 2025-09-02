@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/sashabaranov/go-openai"
 	"go.uber.org/zap"
 )
@@ -699,4 +700,394 @@ func executeReplayDebug(replaySessionID string, turnNumber int, newRequest inter
 	}
 
 	return nil, fmt.Errorf("unsupported request type")
+}
+
+// handleCreatePlaygroundSession 创建 Playground 会话
+func handleCreatePlaygroundSession(c *gin.Context) {
+	var req CreatePlaygroundRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Message: "Invalid request format: " + err.Error(),
+		})
+		return
+	}
+
+	// 创建 Playground 会话
+	playgroundSession, err := createPlaygroundSession(&req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Message: "Failed to create playground session: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, APIResponse{
+		Success: true,
+		Data:    playgroundSession,
+	})
+}
+
+// handleGetPlaygroundSessions 获取 Playground 会话列表
+func handleGetPlaygroundSessions(c *gin.Context) {
+	// 解析分页参数
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 || size > 100 {
+		size = 20
+	}
+
+	// 获取 Playground 会话列表
+	result, err := getPlaygroundSessions(page, size)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Message: "Failed to get playground sessions: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, APIResponse{
+		Success: true,
+		Data:    result,
+	})
+}
+
+// handleGetPlaygroundSession 获取单个 Playground 会话
+func handleGetPlaygroundSession(c *gin.Context) {
+	sessionID := c.Param("id")
+	if sessionID == "" {
+		c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Message: "Playground Session ID is required",
+		})
+		return
+	}
+
+	// 获取 Playground 会话
+	playgroundSession, err := getPlaygroundSession(sessionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Message: "Failed to get playground session: " + err.Error(),
+		})
+		return
+	}
+
+	if playgroundSession == nil {
+		c.JSON(http.StatusNotFound, APIResponse{
+			Success: false,
+			Message: "Playground session not found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, APIResponse{
+		Success: true,
+		Data:    playgroundSession,
+	})
+}
+
+// handleGetPlaygroundSessionRecords 获取 Playground 会话记录
+func handleGetPlaygroundSessionRecords(c *gin.Context) {
+	sessionID := c.Param("id")
+	if sessionID == "" {
+		c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Message: "Playground Session ID is required",
+		})
+		return
+	}
+
+	// 解析分页参数
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("size", "50"))
+
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 || size > 100 {
+		size = 50
+	}
+
+	// 获取 Playground 会话记录
+	result, err := getPlaygroundSessionRecords(sessionID, page, size)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Message: "Failed to get playground session records: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, APIResponse{
+		Success: true,
+		Data:    result,
+	})
+}
+
+// handlePlaygroundTest 处理 Playground 测试请求
+func handlePlaygroundTest(c *gin.Context) {
+	var req PlaygroundTestRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Message: "Invalid request format: " + err.Error(),
+		})
+		return
+	}
+
+	// 检查 Playground 会话是否存在
+	playgroundSession, err := getPlaygroundSession(req.PlaygroundSessionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Message: "Failed to get playground session: " + err.Error(),
+		})
+		return
+	}
+
+	if playgroundSession == nil {
+		c.JSON(http.StatusNotFound, APIResponse{
+			Success: false,
+			Message: "Playground session not found",
+		})
+		return
+	}
+
+	// 执行 Playground 测试
+	startTime := time.Now()
+	result, err := executePlaygroundTest(req.PlaygroundSessionID, req.Request, req.Provider, req.Model, req.Config)
+	duration := time.Since(startTime)
+
+	if err != nil {
+		zapLogger.Error("playground test failed",
+			zap.String("playground_session_id", req.PlaygroundSessionID),
+			zap.String("provider", req.Provider),
+			zap.String("model", req.Model),
+			zap.Duration("duration", duration),
+			zap.String("error", err.Error()))
+		c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Message: "Failed to execute playground test: " + err.Error(),
+		})
+		return
+	}
+
+	zapLogger.Info("playground test finished",
+		zap.String("playground_session_id", req.PlaygroundSessionID),
+		zap.String("provider", req.Provider),
+		zap.String("model", req.Model),
+		zap.Duration("duration", duration))
+
+	c.JSON(http.StatusOK, APIResponse{
+		Success: true,
+		Data:    result,
+	})
+}
+
+// handleDeletePlaygroundSession 删除 Playground 会话
+func handleDeletePlaygroundSession(c *gin.Context) {
+	sessionID := c.Param("id")
+	if sessionID == "" {
+		c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Message: "Playground Session ID is required",
+		})
+		return
+	}
+
+	// 删除 Playground 会话
+	if err := deletePlaygroundSession(sessionID); err != nil {
+		c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Message: "Failed to delete playground session: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, APIResponse{
+		Success: true,
+		Message: "Playground session deleted successfully",
+	})
+}
+
+// executePlaygroundTest 执行 Playground 测试
+func executePlaygroundTest(playgroundSessionID string, newRequest interface{}, provider string, model string, config interface{}) (*PlaygroundRecord, error) {
+	// 获取配置
+	cfg := GetConfig()
+
+	// 根据provider选择配置
+	var apiKey string
+	var baseURL string
+
+	// 不区分大小写查找provider
+	var providerConfig ProviderConfig
+	var found bool
+	for key, config := range cfg.Providers {
+		if strings.EqualFold(key, provider) || strings.EqualFold(config.Name, provider) {
+			providerConfig = config
+			found = true
+			break
+		}
+	}
+
+	if found {
+		apiKey = providerConfig.APIKey
+		baseURL = providerConfig.BaseURL
+	}
+
+	if apiKey == "" {
+		return nil, fmt.Errorf("API key not configured for provider: %s", provider)
+	}
+
+	// 创建客户端配置
+	clientConfig := openai.DefaultConfig(apiKey)
+	if baseURL != "" {
+		clientConfig.BaseURL = baseURL
+	}
+
+	// 创建客户端
+	client := openai.NewClientWithConfig(clientConfig)
+
+	// 解析新的请求数据
+	requestJSON, err := json.Marshal(newRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	// 尝试解析为ChatCompletion请求
+	var chatReq openai.ChatCompletionRequest
+	if err := json.Unmarshal(requestJSON, &chatReq); err == nil {
+		// 设置正确的模型名称
+		if model != "" {
+			chatReq.Model = model
+		}
+
+		// 应用调试配置
+		if config != nil {
+			configMap, ok := config.(map[string]interface{})
+			if ok {
+				if temp, exists := configMap["temperature"]; exists {
+					if tempFloat, ok := temp.(float64); ok {
+						chatReq.Temperature = float32(tempFloat)
+					}
+				}
+				if maxTokens, exists := configMap["max_tokens"]; exists {
+					if maxTokensInt, ok := maxTokens.(int); ok {
+						chatReq.MaxTokens = maxTokensInt
+					}
+				}
+				if topP, exists := configMap["top_p"]; exists {
+					if topPFloat, ok := topP.(float64); ok {
+						chatReq.TopP = float32(topPFloat)
+					}
+				}
+				if freqPenalty, exists := configMap["frequency_penalty"]; exists {
+					if freqPenaltyFloat, ok := freqPenalty.(float64); ok {
+						chatReq.FrequencyPenalty = float32(freqPenaltyFloat)
+					}
+				}
+				if presPenalty, exists := configMap["presence_penalty"]; exists {
+					if presPenaltyFloat, ok := presPenalty.(float64); ok {
+						chatReq.PresencePenalty = float32(presPenaltyFloat)
+					}
+				}
+			}
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+		defer cancel()
+
+		// 调用OpenAI API
+		resp, err := client.CreateChatCompletion(ctx, chatReq)
+
+		// 获取下一个测试编号
+		testNumber, err := getNextTestNumber(playgroundSessionID)
+		if err != nil {
+			return nil, err
+		}
+
+		// 保存 Playground 记录
+		status := "success"
+		errorMsg := ""
+		if err != nil {
+			status = "error"
+			errorMsg = err.Error()
+		}
+
+		if err := savePlaygroundRecord(playgroundSessionID, testNumber, newRequest, resp, status, errorMsg, provider, model, config); err != nil {
+			return nil, err
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		responseJSON, err := json.Marshal(resp)
+		if err != nil {
+			return nil, err
+		}
+
+		return &PlaygroundRecord{
+			ID:                  uuid.New().String(),
+			PlaygroundSessionID: playgroundSessionID,
+			TestNumber:          testNumber,
+			Request:             string(requestJSON),
+			Response:            string(responseJSON),
+			Status:              "success",
+			Provider:            provider,
+			Model:               model,
+			Config: func() string {
+				if config != nil {
+					if b, err := json.Marshal(config); err == nil {
+						return string(b)
+					}
+				}
+				return ""
+			}(),
+		}, nil
+	}
+
+	return nil, fmt.Errorf("unsupported request type")
+}
+
+// handleGetRecord 获取单条记录详情
+func handleGetRecord(c *gin.Context) {
+	recordID := c.Param("id")
+	if recordID == "" {
+		c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Message: "Record ID is required",
+		})
+		return
+	}
+
+	// 获取记录
+	record, err := getRecord(recordID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Message: "Failed to get record: " + err.Error(),
+		})
+		return
+	}
+
+	if record == nil {
+		c.JSON(http.StatusNotFound, APIResponse{
+			Success: false,
+			Message: "Record not found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, APIResponse{
+		Success: true,
+		Data:    record,
+	})
 }
