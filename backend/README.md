@@ -12,65 +12,93 @@ LLM Trace 是一个用于追踪、调试和测试 LLM 调用的后端服务。�
 - **日志**: Zap (结构化日志)
 - **LLM 客户端**: OpenAI Go 客户端
 
-## 后端接口重构完成总结
+## 项目结构
 
-### 1. 新的接口架构
+```
+backend/
+├── handlers/          # 路由处理函数模块
+│   ├── base.go       # 基础工具函数和响应结构
+│   ├── trace.go      # 埋点数据处理
+│   ├── sessions.go   # 会话管理
+│   ├── records.go    # 记录管理
+│   ├── playground.go # Playground 功能
+│   ├── replay.go     # 重放功能
+│   ├── providers.go  # Provider 管理
+│   ├── index.go      # 包入口文件
+│   └── README.md     # handlers 模块说明
+├── types.go           # 统一的数据结构定义
+├── models.go          # 数据库操作和业务逻辑
+├── config.go          # 配置管理
+├── main.go            # 主程序入口
+├── config.yaml        # 配置文件
+├── go.mod             # Go 模块文件
+├── start.sh           # 启动脚本
+└── README.md          # 本文件
+```
 
-#### 1.1 核心埋点接口
+## 后端接口架构
+
+### 1. 核心埋点接口
 - `POST /api/trace` - 接收 LLM 调用埋点数据
 
-#### 1.2 生产环境管理
+### 2. 生产环境管理
 - `GET /api/sessions` - 获取会话列表
 - `GET /api/sessions/:id/records` - 获取指定会话的记录
 - `GET /api/records/:id` - 获取单条记录详情
 - `POST /api/records/:id/replay` - 重放单条记录
 - `DELETE /api/records/:id` - 删除记录
 
-#### 1.3 Playground 调试环境（统一的新调试环境）
+### 3. Playground 调试环境
 - `POST /api/playground-sessions` - 创建 Playground 会话
 - `GET /api/playground-sessions` - 获取 Playground 会话列表
 - `GET /api/playground-sessions/:id` - 获取 Playground 会话详情
 - `DELETE /api/playground-sessions/:id` - 删除 Playground 会话
-
 - `POST /api/playground-sessions/:id/records` - 在指定 playground 中创建记录
 - `GET /api/playground-sessions/:id/records` - 获取 playground 会话的所有记录
-
 - `POST /api/playground-sessions/:id/debug` - 在指定 playground 中执行调试
 
-#### 1.4 配置管理
+### 4. 配置管理
 - `GET /api/providers` - 获取可用的 LLM 提供商和模型信息
 
-#### 1.5 健康检查
+### 5. 健康检查
 - `GET /health` - 服务健康状态检查
 
-### 2. 主要改进
+## 代码重构完成总结
 
-#### 2.1 统一调试环境
-- 移除了重放调试和 Playground 测试的重复功能
-- 统一使用 Playground 作为调试环境
-- 支持基于会话轮次创建调试环境
+### ✅ 已完成的清理工作
 
-#### 2.2 简化的数据模型
-- `PlaygroundSession` 现在基于原始会话和轮次创建
-- `PlaygroundRecord` 包含原始记录引用，便于追溯
-- 支持在同一个 playground 中进行多轮调试
+#### 1. 模块化重构
+- **删除了 `handlers.go`** - 原来的单一大文件（1009行）已按功能模块拆分
+- **删除了 `request.go`** - 数据结构定义文件已整合到 `types.go`
+- **创建了 `handlers/` 目录** - 按功能模块组织代码
 
-#### 2.3 清晰的业务流程
-1. 用户选中 session 的某个轮次，点击调试
-2. 创建或选择 playground 会话
-3. 复制选中的 session turn 作为 playground 下的记录
-4. 在 playground 中进行调试和参数调优
+#### 2. 代码组织优化
+- **`base.go`** - 统一的响应格式和工具函数
+- **`trace.go`** - 埋点数据处理
+- **`sessions.go`** - 会话管理
+- **`records.go`** - 记录管理
+- **`playground.go`** - Playground 功能
+- **`replay.go`** - 重放功能
+- **`providers.go`** - Provider 管理
 
-### 3. 移除的旧接口
-- 重放会话管理接口（`/api/replay-sessions/*`）
-- 重放调试接口（`/api/replay-debug`）
-- Playground 测试接口（`/api/playground-test`）
+#### 3. 数据结构统一
+- **`types.go`** - 所有数据结构定义统一管理
+- 消除了重复的结构定义
+- 修复了字段不匹配问题
 
-### 4. 技术改进
-- 代码结构更清晰，减少了重复代码
-- 统一的错误处理和日志记录
-- 更好的数据一致性和引用关系
-- 支持事务操作确保数据完整性
+#### 4. 代码质量提升
+- 更好的代码组织和可读性
+- 减少了代码重复
+- 模块化设计，便于测试和维护
+- 统一的错误处理和响应格式
+- 清晰的文件依赖关系
+
+### 🔄 待完成工作
+
+- [ ] 完善 handlers 包与 models.go 的集成（目前部分函数还是占位符）
+- [ ] 添加单元测试
+- [ ] 实现真正的数据库操作函数
+- [ ] 完善错误处理和参数验证
 
 ## 数据模型
 
@@ -116,7 +144,7 @@ PlaygroundSession (1) -> (N) PlaygroundRecord
 ## 开发指南
 
 ### 环境要求
-- Go 1.19+
+- Go 1.21+
 - 支持的数据库之一
 
 ### 本地开发
@@ -128,6 +156,31 @@ PlaygroundSession (1) -> (N) PlaygroundRecord
 ### 构建
 ```bash
 go build -o llmtrace .
+```
+
+### 代码结构说明
+
+#### handlers 包
+所有 HTTP 路由处理函数都按功能模块组织在 `handlers/` 目录中：
+
+```go
+import "llmTrace/handlers"
+
+// 设置路由
+api.POST("/trace", handlers.HandleTrace)
+api.GET("/sessions", handlers.HandleGetSessions)
+// ... 其他路由
+```
+
+#### 统一响应格式
+所有接口都使用统一的 `APIResponse` 格式：
+
+```go
+type APIResponse struct {
+    Success bool        `json:"success"`
+    Message string      `json:"message"`
+    Data    interface{} `json:"data,omitempty"`
+}
 ```
 
 ## API 使用示例
@@ -174,7 +227,14 @@ curl -X POST http://localhost:10081/api/playground-sessions/playground_123/debug
 
 ## 更新日志
 
-### v2.0.0 (当前版本)
+### v2.1.0 (当前版本)
+- ✅ 完成代码重构和模块化
+- ✅ 删除无用文件和重复代码
+- ✅ 统一数据结构定义
+- ✅ 优化代码组织和可读性
+- ✅ 修复编译错误和字段不匹配问题
+
+### v2.0.0
 - 重构后端接口，统一调试环境
 - 移除重复功能，简化代码结构
 - 改进数据模型和业务流程
@@ -183,6 +243,12 @@ curl -X POST http://localhost:10081/api/playground-sessions/playground_123/debug
 ## 贡献指南
 
 欢迎提交 Issue 和 Pull Request 来改进项目。
+
+### 开发规范
+1. 新增功能请在对应的 handlers 模块中添加
+2. 数据结构修改请更新 `types.go`
+3. 数据库操作请更新 `models.go`
+4. 保持代码模块化和清晰性
 
 ## 许可证
 

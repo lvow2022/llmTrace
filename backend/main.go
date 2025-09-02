@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 
+	"llmTrace/handlers"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -46,32 +48,32 @@ func setupRoutes(r *gin.Engine) {
 	api := r.Group("/api")
 	{
 		// 埋点接口
-		api.POST("/trace", handleTrace)
+		api.POST("/trace", handlers.HandleTrace)
 
 		// 会话管理（生产环境）
-		api.GET("/sessions", handleGetSessions)
-		api.GET("/sessions/:id/records", handleGetSessionRecords)
+		api.GET("/sessions", handlers.HandleGetSessions)
+		api.GET("/sessions/:id/records", handlers.HandleGetSessionRecords)
 
 		// 记录管理（生产环境）
-		api.GET("/records/:id", handleGetRecord)
-		api.POST("/records/:id/replay", handleReplayRecord)
-		api.DELETE("/records/:id", handleDeleteRecord)
+		api.GET("/records/:id", handlers.HandleGetRecord)
+		api.POST("/records/:id/replay", handlers.HandleReplayRecord)
+		api.DELETE("/records/:id", handlers.HandleDeleteRecord)
 
 		// Playground 管理（新的调试环境）
-		api.POST("/playground-sessions", handleCreatePlaygroundSession)
-		api.GET("/playground-sessions", handleGetPlaygroundSessions)
-		api.GET("/playground-sessions/:id", handleGetPlaygroundSession)
-		api.DELETE("/playground-sessions/:id", handleDeletePlaygroundSession)
+		api.POST("/playground-sessions", handlers.HandleCreatePlaygroundSession)
+		api.GET("/playground-sessions", handlers.HandleGetPlaygroundSessions)
+		api.GET("/playground-sessions/:id", handlers.HandleGetPlaygroundSession)
+		api.DELETE("/playground-sessions/:id", handlers.HandleDeletePlaygroundSession)
 
 		// Playground 记录管理
-		api.POST("/playground-sessions/:id/records", handleCreatePlaygroundRecord)
-		api.GET("/playground-sessions/:id/records", handleGetPlaygroundSessionRecords)
+		api.POST("/playground-sessions/:id/records", handlers.HandleCreatePlaygroundRecord)
+		api.GET("/playground-sessions/:id/records", handlers.HandleGetPlaygroundSessionRecords)
 
 		// Playground 调试
-		api.POST("/playground-sessions/:id/debug", handlePlaygroundDebug)
+		api.POST("/playground-sessions/:id/debug", handlers.HandlePlaygroundDebug)
 
 		// Provider管理
-		api.GET("/providers", handleGetProviders)
+		api.GET("/providers", handlers.HandleGetProviders)
 	}
 
 	// 健康检查

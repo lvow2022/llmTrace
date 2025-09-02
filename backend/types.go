@@ -97,44 +97,45 @@ type CreatePlaygroundRecordRequest struct {
 type PlaygroundRecord struct {
 	ID                  string    `json:"id" gorm:"primaryKey;type:varchar(255)"`
 	PlaygroundSessionID string    `json:"playground_session_id" gorm:"type:varchar(255);not null;index"`
-	TurnNumber          int       `json:"turn_number" gorm:"not null"`                                // 在 playground 中的轮次
-	OriginalRecordID    string    `json:"original_record_id" gorm:"type:varchar(255);not null;index"` // 原始记录ID
-	Request             string    `json:"request" gorm:"type:text;not null"`
-	Response            string    `json:"response" gorm:"type:text"`
-	Status              string    `json:"status" gorm:"type:varchar(50);not null"`
-	ErrorMsg            string    `json:"error_msg" gorm:"type:text"`
-	Provider            string    `json:"provider" gorm:"type:varchar(100)"`
-	Model               string    `json:"model" gorm:"type:varchar(100)"`
-	Config              string    `json:"config" gorm:"type:text"` // 调试配置（JSON格式）
+	TurnNumber          int       `json:"turn_number" gorm:"not null"`                       // 在 playground 中的轮次
+	OriginalRecordID    string    `json:"original_record_id" gorm:"type:varchar(255);index"` // 原始记录ID
+	Request             string    `json:"request" gorm:"type:text;not null"`                 // 请求内容
+	Response            string    `json:"response" gorm:"type:text"`                         // 响应内容
+	Status              string    `json:"status" gorm:"type:varchar(50);not null"`           // success/error
+	ErrorMsg            string    `json:"error_msg" gorm:"type:text"`                        // 错误信息
+	Provider            string    `json:"provider" gorm:"type:varchar(100)"`                 // 使用的提供商
+	Model               string    `json:"model" gorm:"type:varchar(100)"`                    // 使用的模型
+	Config              string    `json:"config" gorm:"type:text"`                           // 调试配置（温度、token等）
 	CreatedAt           time.Time `json:"created_at" gorm:"autoCreateTime;index"`
+	UpdatedAt           time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 // PlaygroundDebugRequest Playground 调试请求
 type PlaygroundDebugRequest struct {
-	TurnNumber int         `json:"turn_number" binding:"required"` // 要调试的轮次
-	Request    interface{} `json:"request" binding:"required"`     // 新的请求内容
-	Provider   string      `json:"provider"`                       // LLM提供商
-	Model      string      `json:"model"`                          // 模型名称
-	Config     interface{} `json:"config"`                         // 调试配置
+	TurnNumber int         `json:"turn_number" binding:"required"`
+	Request    interface{} `json:"request" binding:"required"`
+	Provider   string      `json:"provider" binding:"required"`
+	Model      string      `json:"model" binding:"required"`
+	Config     interface{} `json:"config"` // 调试配置（温度、token等）
 }
 
-// ReplayRequest 重放请求（用于单次重放）
+// ReplayRequest 重放请求
 type ReplayRequest struct {
 	SessionID  string      `json:"session_id" binding:"required"`
 	TurnNumber int         `json:"turn_number" binding:"required"`
 	Request    interface{} `json:"request" binding:"required"`
-	Provider   string      `json:"provider"`
-	Model      string      `json:"model"`
+	Provider   string      `json:"provider" binding:"required"`
+	Model      string      `json:"model" binding:"required"`
 }
 
-// ReplayDebugRequest 调试重放请求（用于多轮调试）
+// ReplayDebugRequest 重放调试请求
 type ReplayDebugRequest struct {
 	ReplaySessionID string      `json:"replay_session_id" binding:"required"`
 	TurnNumber      int         `json:"turn_number" binding:"required"`
 	Request         interface{} `json:"request" binding:"required"`
-	Provider        string      `json:"provider"`
-	Model           string      `json:"model"`
-	Config          interface{} `json:"config"` // 调试配置
+	Provider        string      `json:"provider" binding:"required"`
+	Model           string      `json:"model" binding:"required"`
+	Config          interface{} `json:"config"` // 调试配置（温度、token等）
 }
 
 // ModelInfo 模型信息
@@ -144,22 +145,22 @@ type ModelInfo struct {
 	Enabled bool   `json:"enabled"`
 }
 
-// ProviderInfo Provider信息
+// ProviderInfo Provider 信息
 type ProviderInfo struct {
 	Name    string      `json:"name"`
 	Type    string      `json:"type"`
 	Enabled bool        `json:"enabled"`
-	Models  []ModelInfo `json:"models,omitempty"`
+	Models  []ModelInfo `json:"models"`
 }
 
-// API响应结构
+// APIResponse 统一的API响应格式
 type APIResponse struct {
 	Success bool        `json:"success"`
+	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
-	Message string      `json:"message,omitempty"`
 }
 
-// 分页响应结构
+// PaginatedResponse 分页响应格式
 type PaginatedResponse struct {
 	Data       interface{} `json:"data"`
 	Total      int         `json:"total"`
