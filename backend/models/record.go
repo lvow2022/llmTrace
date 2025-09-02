@@ -87,8 +87,8 @@ func SaveTraceRecord(sessionID string, turnNumber int, request interface{}, resp
 	return tx.Commit().Error
 }
 
-// GetSessionRecords 获取会话记录
-func GetSessionRecords(sessionID string, page, size int) ([]Record, int64, error) {
+// GetSessionRecordsByID 获取会话记录
+func GetSessionRecordsByID(sessionID string, page, size int) ([]Record, int64, error) {
 	var total int64
 	if err := db.Model(&Record{}).Where("session_id = ?", sessionID).Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to count records: %v", err)
@@ -105,8 +105,8 @@ func GetSessionRecords(sessionID string, page, size int) ([]Record, int64, error
 	return records, total, nil
 }
 
-// GetRecord 获取单条记录
-func GetRecord(recordID string) (*Record, error) {
+// GetRecordByID 获取单条记录
+func GetRecordByID(recordID string) (*Record, error) {
 	var record Record
 	if err := db.Where("id = ?", recordID).First(&record).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {

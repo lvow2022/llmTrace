@@ -26,7 +26,7 @@ func HandleGetRecord(c *gin.Context) {
 	}
 
 	// 获取记录
-	record, err := getRecord(recordID)
+	record, err := getRecordByID(recordID)
 	if err != nil {
 		sendInternalServerError(c, "Failed to get record: "+err.Error())
 		return
@@ -57,7 +57,7 @@ func HandleReplayRecord(c *gin.Context) {
 	}
 
 	// 获取原始记录
-	originalRecord, err := getRecord(recordID)
+	originalRecord, err := getRecordByID(recordID)
 	if err != nil {
 		sendInternalServerError(c, "Failed to get original record: "+err.Error())
 		return
@@ -103,7 +103,7 @@ func HandleDeleteRecord(c *gin.Context) {
 	}
 
 	// 删除记录
-	if err := deleteRecord(recordID); err != nil {
+	if err := deleteRecordByID(recordID); err != nil {
 		sendInternalServerError(c, "Failed to delete record: "+err.Error())
 		return
 	}
@@ -111,13 +111,13 @@ func HandleDeleteRecord(c *gin.Context) {
 	sendSuccessMessage(c, "Record deleted successfully")
 }
 
-// getRecord 获取记录
-func getRecord(recordID string) (interface{}, error) {
-	return models.GetRecord(recordID)
+// getRecordByID 获取记录
+func getRecordByID(recordID string) (interface{}, error) {
+	return models.GetRecordByID(recordID)
 }
 
-// deleteRecord 删除记录
-func deleteRecord(recordID string) error {
+// deleteRecordByID 删除记录
+func deleteRecordByID(recordID string) error {
 	return models.DeleteRecord(recordID)
 }
 

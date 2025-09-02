@@ -31,7 +31,7 @@ func HandleGetSessionRecords(c *gin.Context) {
 	page, size := parsePaginationParams(c, 1, 50)
 
 	// 获取会话记录
-	result, err := getSessionRecords(sessionID, page, size)
+	result, err := getSessionRecordsByID(sessionID, page, size)
 	if err != nil {
 		sendInternalServerError(c, "Failed to get session records: "+err.Error())
 		return
@@ -58,9 +58,9 @@ func getSessions(page, size int) (interface{}, error) {
 	}, nil
 }
 
-// getSessionRecords 获取会话记录
-func getSessionRecords(sessionID string, page, size int) (interface{}, error) {
-	records, total, err := models.GetSessionRecords(sessionID, page, size)
+// getSessionRecordsByID 获取会话记录
+func getSessionRecordsByID(sessionID string, page, size int) (interface{}, error) {
+	records, total, err := models.GetSessionRecordsByID(sessionID, page, size)
 	if err != nil {
 		return nil, err
 	}
