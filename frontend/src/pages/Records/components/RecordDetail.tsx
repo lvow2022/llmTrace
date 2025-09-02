@@ -19,7 +19,7 @@ import {
 } from '@ant-design/icons';
 import { Record } from '../../../types';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { TabPane } = Tabs;
 
 interface RecordDetailProps {

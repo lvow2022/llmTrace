@@ -52,7 +52,12 @@ func InitDatabase(driver, dsn string) error {
 	}
 
 	// 自动迁移表结构
-	if err := db.AutoMigrate(&Session{}, &Record{}, &ReplaySession{}, &DebugRecord{}, &PlaygroundSession{}, &PlaygroundRecord{}); err != nil {
+	if err := db.AutoMigrate(
+		&Session{},
+		&Record{},
+		&DebugRecord{},
+		&Playground{},
+		&DebugSession{}); err != nil {
 		return fmt.Errorf("failed to migrate database: %v", err)
 	}
 

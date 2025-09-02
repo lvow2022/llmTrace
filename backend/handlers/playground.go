@@ -1,11 +1,15 @@
 package handlers
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"llmTrace/models"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sashabaranov/go-openai"
 	"go.uber.org/zap"
 )
 
@@ -151,7 +155,7 @@ func HandleCreateDebugSessionFromRecord(c *gin.Context) {
 
 // HandleGetDebugSessions 获取调试会话列表
 func HandleGetDebugSessions(c *gin.Context) {
-	playgroundID := c.Param("playground_id")
+	playgroundID := c.Param("id")
 	if playgroundID == "" {
 		sendBadRequest(c, "Playground ID is required")
 		return
@@ -171,7 +175,7 @@ func HandleGetDebugSessions(c *gin.Context) {
 
 // HandleGetDebugSession 获取单个调试会话（包含所有记录）
 func HandleGetDebugSession(c *gin.Context) {
-	sessionID := c.Param("id")
+	sessionID := c.Param("session_id")
 	if sessionID == "" {
 		sendBadRequest(c, "Debug Session ID is required")
 		return
@@ -201,7 +205,7 @@ func HandleDeletePlayground(c *gin.Context) {
 	}
 
 	// 删除 Playground
-	if err := deletePlayground(playgroundID); err != nil {
+	if err := deletePlaygroundByID(playgroundID); err != nil {
 		sendInternalServerError(c, "Failed to delete playground: "+err.Error())
 		return
 	}
@@ -211,7 +215,7 @@ func HandleDeletePlayground(c *gin.Context) {
 
 // HandleDeleteDebugSession 删除调试会话
 func HandleDeleteDebugSession(c *gin.Context) {
-	debugSessionID := c.Param("id")
+	debugSessionID := c.Param("session_id")
 	if debugSessionID == "" {
 		sendBadRequest(c, "Debug Session ID is required")
 		return
@@ -228,7 +232,7 @@ func HandleDeleteDebugSession(c *gin.Context) {
 
 // HandleCreateDebugRecord 在指定调试会话中创建记录
 func HandleCreateDebugRecord(c *gin.Context) {
-	debugSessionID := c.Param("debug_session_id")
+	debugSessionID := c.Param("session_id")
 	if debugSessionID == "" {
 		sendBadRequest(c, "Debug Session ID is required")
 		return
@@ -398,7 +402,7 @@ func getDebugSessionWithRecords(sessionID string) (interface{}, error) {
 	return debugSessionWithRecords, nil
 }
 
-func deletePlayground(playgroundID string) error {
+func deletePlaygroundByID(playgroundID string) error {
 	// TODO: 实现删除 playground 的逻辑
 	return nil
 }
@@ -411,8 +415,265 @@ func createDebugRecord(debugSessionID string, req *CreateDebugRecordRequest) (in
 }
 
 func executeDebug(debugSessionID string, turnNumber int, newRequest interface{}, provider string, model string, config interface{}) (interface{}, error) {
-	// TODO: 实现执行调试的逻辑
-	return nil, nil
+	// 获取配置 - 从环境变量获取 API 密钥
+	openaiAPIKey := os.Getenv("OPENAI_API_KEY")
+	deepseekAPIKey := os.Getenv("LLMTRACE_PROVIDERS_DEEPSEEK_API_KEY")
+	deepseekBaseURL := os.Getenv("LLMTRACE_PROVIDERS_DEEPSEEK_BASE_URL")
+	if deepseekBaseURL == "" {
+		deepseekBaseURL = "https://api.deepseek.com"
+	}
+
+	// 记录开始时间
+	startTime := time.Now()
+
+	// 根据提供商构造请求
+	var response interface{}
+	var err error
+
+	switch provider {
+	case "openai":
+		response, err = executeOpenAIRequest(newRequest, model, config, openaiAPIKey)
+	case "deepseek":
+		response, err = executeDeepSeekRequest(newRequest, model, config, deepseekAPIKey, deepseekBaseURL)
+	default:
+		return nil, fmt.Errorf("unsupported provider: %s", provider)
+	}
+
+	if err != nil {
+		// 记录错误
+		errorMsg := err.Error()
+
+		// 将请求和配置转换为字符串
+		requestStr := ""
+		if newRequest != nil {
+			if requestBytes, marshalErr := json.Marshal(newRequest); marshalErr == nil {
+				requestStr = string(requestBytes)
+			}
+		}
+
+		configStr := ""
+		if config != nil {
+			if configBytes, marshalErr := json.Marshal(config); marshalErr == nil {
+				configStr = string(configBytes)
+			}
+		}
+
+		_, createErr := models.CreateDebugRecord(
+			debugSessionID,
+			turnNumber,
+			requestStr,
+			"", // 响应为空
+			"error",
+			errorMsg,
+			provider,
+			model,
+			configStr,
+		)
+		if createErr != nil {
+			zap.L().Error("Failed to create debug record", zap.Error(createErr))
+		}
+		return nil, err
+	}
+
+	// 计算执行时长（用于日志记录）
+	_ = time.Since(startTime).Milliseconds()
+
+	// 将响应转换为字符串
+	responseStr := ""
+	if response != nil {
+		if responseBytes, marshalErr := json.Marshal(response); marshalErr == nil {
+			responseStr = string(responseBytes)
+		}
+	}
+
+	// 将请求和配置转换为字符串
+	requestStr := ""
+	if newRequest != nil {
+		if requestBytes, marshalErr := json.Marshal(newRequest); marshalErr == nil {
+			requestStr = string(requestBytes)
+		}
+	}
+
+	configStr := ""
+	if config != nil {
+		if configBytes, marshalErr := json.Marshal(config); marshalErr == nil {
+			configStr = string(configBytes)
+		}
+	}
+
+	// 创建调试记录
+	_, createErr := models.CreateDebugRecord(
+		debugSessionID,
+		turnNumber,
+		requestStr,
+		responseStr,
+		"success",
+		"",
+		provider,
+		model,
+		configStr,
+	)
+	if createErr != nil {
+		zap.L().Error("Failed to create debug record", zap.Error(createErr))
+	}
+
+	return response, nil
+}
+
+// executeOpenAIRequest 执行 OpenAI 请求
+func executeOpenAIRequest(request interface{}, model string, config interface{}, apiKey string) (interface{}, error) {
+	if apiKey == "" {
+		return nil, fmt.Errorf("OpenAI API key not configured")
+	}
+
+	// 创建 OpenAI 客户端
+	client := openai.NewClient(apiKey)
+
+	// 解析请求内容
+	requestBytes, err := json.Marshal(request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %v", err)
+	}
+
+	// 解析配置
+	var configMap map[string]interface{}
+	if config != nil {
+		if configBytes, marshalErr := json.Marshal(config); marshalErr == nil {
+			if unmarshalErr := json.Unmarshal(configBytes, &configMap); unmarshalErr != nil {
+				zap.L().Warn("Failed to parse config", zap.Error(unmarshalErr))
+			}
+		}
+	}
+
+	// 构造 OpenAI 请求
+	openaiReq := openai.ChatCompletionRequest{
+		Model: model,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    openai.ChatMessageRoleUser,
+				Content: string(requestBytes),
+			},
+		},
+		Stream: false, // 非流式
+	}
+
+	// 应用配置参数
+	if configMap != nil {
+		if temperature, exists := configMap["temperature"]; exists {
+			if temp, ok := temperature.(float64); ok {
+				tempFloat32 := float32(temp)
+				openaiReq.Temperature = tempFloat32
+			}
+		}
+		if maxTokens, exists := configMap["max_tokens"]; exists {
+			if max, ok := maxTokens.(float64); ok {
+				openaiReq.MaxTokens = int(max)
+			}
+		}
+		if topP, exists := configMap["top_p"]; exists {
+			if tp, ok := topP.(float64); ok {
+				tpFloat32 := float32(tp)
+				openaiReq.TopP = tpFloat32
+			}
+		}
+	}
+
+	// 发送请求
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	resp, err := client.CreateChatCompletion(ctx, openaiReq)
+	if err != nil {
+		return nil, fmt.Errorf("OpenAI API request failed: %v", err)
+	}
+
+	// 返回响应
+	return map[string]interface{}{
+		"id":      resp.ID,
+		"model":   resp.Model,
+		"choices": resp.Choices,
+		"usage":   resp.Usage,
+	}, nil
+}
+
+// executeDeepSeekRequest 执行 DeepSeek 请求
+func executeDeepSeekRequest(request interface{}, model string, config interface{}, apiKey string, baseURL string) (interface{}, error) {
+	if apiKey == "" {
+		return nil, fmt.Errorf("DeepSeek API key not configured")
+	}
+
+	// 创建 DeepSeek 客户端（使用 OpenAI 兼容的客户端）
+	clientConfig := openai.DefaultConfig(apiKey)
+	if baseURL != "" {
+		clientConfig.BaseURL = baseURL
+	}
+	client := openai.NewClientWithConfig(clientConfig)
+
+	// 解析请求内容
+	requestBytes, err := json.Marshal(request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %v", err)
+	}
+
+	// 解析配置
+	var configMap map[string]interface{}
+	if config != nil {
+		if configBytes, marshalErr := json.Marshal(config); marshalErr == nil {
+			if unmarshalErr := json.Unmarshal(configBytes, &configMap); unmarshalErr != nil {
+				zap.L().Warn("Failed to parse config", zap.Error(unmarshalErr))
+			}
+		}
+	}
+
+	// 构造 DeepSeek 请求
+	deepseekReq := openai.ChatCompletionRequest{
+		Model: model,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    openai.ChatMessageRoleUser,
+				Content: string(requestBytes),
+			},
+		},
+		Stream: false, // 非流式
+	}
+
+	// 应用配置参数
+	if configMap != nil {
+		if temperature, exists := configMap["temperature"]; exists {
+			if temp, ok := temperature.(float64); ok {
+				tempFloat32 := float32(temp)
+				deepseekReq.Temperature = tempFloat32
+			}
+		}
+		if maxTokens, exists := configMap["max_tokens"]; exists {
+			if max, ok := maxTokens.(float64); ok {
+				deepseekReq.MaxTokens = int(max)
+			}
+		}
+		if topP, exists := configMap["top_p"]; exists {
+			if tp, ok := topP.(float64); ok {
+				tpFloat32 := float32(tp)
+				deepseekReq.TopP = tpFloat32
+			}
+		}
+	}
+
+	// 发送请求
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	resp, err := client.CreateChatCompletion(ctx, deepseekReq)
+	if err != nil {
+		return nil, fmt.Errorf("DeepSeek API request failed: %v", err)
+	}
+
+	// 返回响应
+	return map[string]interface{}{
+		"id":      resp.ID,
+		"model":   resp.Model,
+		"choices": resp.Choices,
+		"usage":   resp.Usage,
+	}, nil
 }
 
 func createDebugSessionFromRecord(recordID string, req *CreateDebugSessionFromRecordRequest) (interface{}, error) {

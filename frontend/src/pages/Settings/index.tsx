@@ -27,7 +27,7 @@ import {
 } from '@ant-design/icons';
 import { useAppStore } from '../../stores';
 import { APIService } from '../../services/api';
-import { ProviderInfo, ReplayConfig } from '../../types';
+import { ProviderInfo } from '../../types';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -78,7 +78,7 @@ const Settings: React.FC = () => {
       localStorage.setItem('llmtrace-settings', JSON.stringify(values));
       
       // 保存重放配置
-      const replayConfig: ReplayConfig = {
+      const replayConfig = {
         provider: values.replayProvider || '',
         model: values.replayModel || '',
         temperature: values.temperature || 0.7,

@@ -8,13 +8,13 @@ import {
   ClockCircleOutlined 
 } from '@ant-design/icons';
 import { useSessionStore, useRecordStore } from '../../stores';
-import { Session, Record } from '../../types';
+import { Session } from '../../types';
 
 const { Title } = Typography;
 
 const Dashboard: React.FC = () => {
   const { sessions, fetchSessions } = useSessionStore();
-  const { records, fetchRecords } = useRecordStore();
+  const { records } = useRecordStore();
   const [stats, setStats] = useState({
     totalSessions: 0,
     totalRecords: 0,

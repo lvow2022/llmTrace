@@ -14,15 +14,12 @@ import {
   Statistic,
   Select,
   Drawer,
-  Tabs,
   Alert
 } from 'antd';
 import { 
   EyeOutlined, 
   DeleteOutlined, 
   SearchOutlined,
-  ReloadOutlined,
-  CodeOutlined,
   HistoryOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
@@ -31,10 +28,9 @@ import {
 } from '@ant-design/icons';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useSessionStore, useRecordStore } from '../../stores';
-import { Record, Session, ReplaySession } from '../../types';
+import { Record } from '../../types';
 import RecordDetail from './components/RecordDetail';
-import ReplayModal from './components/ReplayModal';
-import StartDebugModal from './components/StartDebugModal';
+import CreateDebugSessionModal from './components/CreateDebugSessionModal';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -61,15 +57,9 @@ const Records: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedRecord, setSelectedRecord] = useState<Record | null>(null);
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
-  const [replayModalVisible, setReplayModalVisible] = useState(false);
-  const [replayRecord, setReplayRecord] = useState<Record | null>(null);
-  const [startDebugModalVisible, setStartDebugModalVisible] = useState(false);
-  const [debugRecord, setDebugRecord] = useState<Record | null>(null);
+  const [createDebugSessionModalVisible, setCreateDebugSessionModalVisible] = useState(false);
+  const [selectedRecordForDebug, setSelectedRecordForDebug] = useState<Record | null>(null);
   
-  // 调试会话相关状态
-  const [debugMode, setDebugMode] = useState<boolean>(false);
-  const [debugSessionId, setDebugSessionId] = useState<string>('');
-
   // 从URL参数获取会话ID
   const sessionIdFromUrl = searchParams.get('session_id');
 
@@ -213,18 +203,10 @@ const Records: React.FC = () => {
           <Button
             type="link"
             size="small"
-            icon={<ReloadOutlined />}
-            onClick={() => handleReplayRecord(record)}
-          >
-            重放
-          </Button>
-          <Button
-            type="link"
-            size="small"
             icon={<PlayCircleOutlined />}
-            onClick={() => handleStartDebugRecord(record)}
+            onClick={() => handleCreateDebugSession(record)}
           >
-            调试
+            创建调试会话
           </Button>
           <Button
             type="link"
@@ -246,33 +228,10 @@ const Records: React.FC = () => {
     setDetailDrawerVisible(true);
   };
 
-  // 重放记录
-  const handleReplayRecord = (record: Record) => {
-    setReplayRecord(record);
-    setReplayModalVisible(true);
-    setDebugMode(false); // 默认为重放模式
-  };
-
-  // 开始调试记录
-  const handleStartDebugRecord = (record: Record) => {
-    setReplayRecord(record);
-    setReplayModalVisible(true);
-    setDebugMode(true); // 设置为调试模式
-  };
-
-  // 开始调试
-  const handleStartDebug = (record: Record) => {
-    setDebugRecord(record);
-    setStartDebugModalVisible(true);
-  };
-
-  // 处理调试会话创建成功
-  const handleDebugSuccess = (replaySession: ReplaySession) => {
-    setStartDebugModalVisible(false);
-    setDebugRecord(null);
-    message.success('调试会话创建成功，正在跳转到调试界面...');
-    // 跳转到调试界面
-    navigate(`/replay-debug/${replaySession.id}`);
+  // 创建调试会话
+  const handleCreateDebugSession = (record: Record) => {
+    setSelectedRecordForDebug(record);
+    setCreateDebugSessionModalVisible(true);
   };
 
   // 删除记录
@@ -431,30 +390,17 @@ const Records: React.FC = () => {
         open={detailDrawerVisible}
         onClose={() => setDetailDrawerVisible(false)}
         extra={
-          <Space>
-            <Button 
-              icon={<ReloadOutlined />}
-              onClick={() => {
-                if (selectedRecord) {
-                  setDetailDrawerVisible(false);
-                  handleReplayRecord(selectedRecord);
-                }
-              }}
-            >
-              重放
-            </Button>
-            <Button 
-              icon={<PlayCircleOutlined />}
-              onClick={() => {
-                if (selectedRecord) {
-                  setDetailDrawerVisible(false);
-                  handleStartDebugRecord(selectedRecord);
-                }
-              }}
-            >
-              调试
-            </Button>
-          </Space>
+          <Button 
+            icon={<PlayCircleOutlined />}
+            onClick={() => {
+              if (selectedRecord) {
+                setDetailDrawerVisible(false);
+                handleCreateDebugSession(selectedRecord);
+              }
+            }}
+          >
+            创建调试会话
+          </Button>
         }
       >
         {selectedRecord && (
@@ -462,47 +408,21 @@ const Records: React.FC = () => {
         )}
       </Drawer>
 
-      {/* 重放/调试模态框 */}
-      <ReplayModal
-        visible={replayModalVisible}
-        record={replayRecord}
-        debugMode={debugMode}
-        debugSessionId={debugSessionId}
+      {/* 创建调试会话模态框 */}
+      <CreateDebugSessionModal
+        visible={createDebugSessionModalVisible}
+        record={selectedRecordForDebug}
         onCancel={() => {
-          setReplayModalVisible(false);
-          setReplayRecord(null);
-          setDebugMode(false);
-          setDebugSessionId('');
+          setCreateDebugSessionModalVisible(false);
+          setSelectedRecordForDebug(null);
         }}
         onSuccess={() => {
-          if (debugMode) {
-            // 调试模式：保持模态框打开，继续调试
-            message.success('调试请求执行成功');
-          } else {
-            // 重放模式：关闭模态框
-            setReplayModalVisible(false);
-            setReplayRecord(null);
-            message.success('重放成功');
-            // 刷新记录列表
-            if (currentSession) {
-              fetchRecords(currentSession.id, pagination.current, pagination.pageSize);
-            }
-          }
+          setCreateDebugSessionModalVisible(false);
+          setSelectedRecordForDebug(null);
+          message.success('调试会话创建成功！');
+          // 跳转到Playground页面
+          navigate('/playground');
         }}
-        onDebugSessionUpdate={(sessionId: string) => {
-          setDebugSessionId(sessionId);
-        }}
-      />
-
-      {/* 开始调试模态框 */}
-      <StartDebugModal
-        visible={startDebugModalVisible}
-        record={debugRecord}
-        onCancel={() => {
-          setStartDebugModalVisible(false);
-          setDebugRecord(null);
-        }}
-        onSuccess={handleDebugSuccess}
       />
     </div>
   );

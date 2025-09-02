@@ -65,14 +65,15 @@ func setupRoutes(r *gin.Engine) {
 		api.DELETE("/playground/:id", handlers.HandleDeletePlayground) // 删除 playground
 
 		// Debug Session 管理（在 playground 中）
-		api.GET("/playground/:playground_id/session", handlers.HandleGetDebugSessions)          // 获取调试会话列表
-		api.GET("/playground/:playground_id/session/:id", handlers.HandleGetDebugSession)       // 获取调试会话详情（包含所有记录）
-		api.DELETE("/playground/:playground_id/session/:id", handlers.HandleDeleteDebugSession) // 删除调试会话
+		api.GET("/playground/:id/sessions", handlers.HandleGetDebugSessions)                  // 获取调试会话列表
+		api.GET("/playground/:id/sessions/:session_id", handlers.HandleGetDebugSession)       // 获取调试会话详情（包含所有记录）
+		api.DELETE("/playground/:id/sessions/:session_id", handlers.HandleDeleteDebugSession) // 删除调试会话
 
 		// 直接从 trace_record 创建 debug_session（新增）
 		api.POST("/records/:record_id/create-debug-session", handlers.HandleCreateDebugSessionFromRecord) // 从记录创建调试会话
 
-		api.POST("/playground/:playground_id/session/:debug_session_id/debug", handlers.HandlePlaygroundDebug) // 执行调试
+		// 执行调试
+		api.POST("/playground/:id/sessions/:session_id/debug", handlers.HandlePlaygroundDebug) // 执行调试
 
 		// Provider管理
 		api.GET("/providers", handlers.HandleGetProviders)

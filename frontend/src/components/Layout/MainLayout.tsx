@@ -39,9 +39,9 @@ const MainLayout: React.FC = () => {
       label: '调用记录',
     },
     {
-      key: '/replay-sessions',
+      key: '/playground',
       icon: <PlayCircleOutlined />,
-      label: '调试会话',
+      label: 'Playground调试',
     },
     {
       key: '/settings',
