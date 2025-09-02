@@ -71,11 +71,14 @@ func setupRoutes(r *gin.Engine) {
 		api.POST("/playground-sessions", handleCreatePlaygroundSession)
 		api.GET("/playground-sessions", handleGetPlaygroundSessions)
 		api.GET("/playground-sessions/:id", handleGetPlaygroundSession)
-		api.GET("/playground-sessions/:id/records", handleGetPlaygroundSessionRecords)
 		api.DELETE("/playground-sessions/:id", handleDeletePlaygroundSession)
 
-		// Playground 测试
-		api.POST("/playground-test", handlePlaygroundTest)
+		// Playground 记录管理
+		api.POST("/playground-sessions/:id/records", handleCreatePlaygroundRecord)
+		api.GET("/playground-sessions/:id/records", handleGetPlaygroundSessionRecords)
+
+		// Playground 调试
+		api.POST("/playground-sessions/:id/debug", handlePlaygroundDebug)
 
 		// Provider管理
 		api.GET("/providers", handleGetProviders)

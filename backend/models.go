@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sashabaranov/go-openai"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -401,28 +404,36 @@ func deleteReplaySession(sessionID string) error {
 
 // createPlaygroundSession 创建 Playground 会话
 func createPlaygroundSession(req *CreatePlaygroundRequest) (*PlaygroundSession, error) {
-	// 获取原始记录信息
-	var originalRecord Record
-	if err := db.Where("id = ?", req.OriginalRecordID).First(&originalRecord).Error; err != nil {
+	// 检查原始会话是否存在
+	var originalSession Session
+	if err := db.Where("id = ?", req.OriginalSessionID).First(&originalSession).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("original record not found")
+			return nil, fmt.Errorf("original session not found")
 		}
-		return nil, fmt.Errorf("failed to get original record: %v", err)
+		return nil, fmt.Errorf("failed to check original session: %v", err)
+	}
+
+	// 检查原始轮次是否存在
+	var originalRecord Record
+	if err := db.Where("session_id = ? AND turn_number = ?", req.OriginalSessionID, req.OriginalTurnNumber).First(&originalRecord).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("original turn not found")
+		}
+		return nil, fmt.Errorf("failed to check original turn: %v", err)
 	}
 
 	// 生成会话名称
 	sessionName := req.Name
 	if sessionName == "" {
-		sessionName = fmt.Sprintf("Playground-%s-轮次%d", time.Now().Format("01-02 15:04"), originalRecord.TurnNumber)
+		sessionName = fmt.Sprintf("Playground-%s-轮次%d", time.Now().Format("01-02 15:04"), req.OriginalTurnNumber)
 	}
 
 	// 创建 Playground 会话
 	playgroundSession := &PlaygroundSession{
 		ID:                 uuid.New().String(),
 		Name:               sessionName,
-		OriginalRecordID:   req.OriginalRecordID,
-		OriginalSessionID:  originalRecord.SessionID,
-		OriginalTurnNumber: originalRecord.TurnNumber,
+		OriginalSessionID:  req.OriginalSessionID,
+		OriginalTurnNumber: req.OriginalTurnNumber,
 		Status:             "active",
 	}
 
@@ -496,7 +507,7 @@ func getPlaygroundSessionRecords(sessionID string, page, size int) (*PaginatedRe
 }
 
 // savePlaygroundRecord 保存 Playground 记录
-func savePlaygroundRecord(playgroundSessionID string, testNumber int, request interface{}, response interface{}, status string, errorMsg string, provider string, model string, config interface{}) error {
+func savePlaygroundRecord(playgroundSessionID string, turnNumber int, request interface{}, response interface{}, status string, errorMsg string, provider string, model string, config interface{}) error {
 	// 序列化数据
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
@@ -523,7 +534,7 @@ func savePlaygroundRecord(playgroundSessionID string, testNumber int, request in
 	playgroundRecord := &PlaygroundRecord{
 		ID:                  uuid.New().String(),
 		PlaygroundSessionID: playgroundSessionID,
-		TestNumber:          testNumber,
+		TurnNumber:          turnNumber,
 		Request:             string(requestJSON),
 		Response:            string(responseJSON),
 		Status:              status,
@@ -540,16 +551,16 @@ func savePlaygroundRecord(playgroundSessionID string, testNumber int, request in
 	return nil
 }
 
-// getNextTestNumber 获取下一个测试编号
-func getNextTestNumber(playgroundSessionID string) (int, error) {
-	var maxTestNumber int
+// getNextTurnNumber 获取下一个轮次编号
+func getNextTurnNumber(playgroundSessionID string) (int, error) {
+	var maxTurnNumber int
 	if err := db.Model(&PlaygroundRecord{}).
 		Where("playground_session_id = ?", playgroundSessionID).
-		Select("COALESCE(MAX(test_number), 0)").
-		Scan(&maxTestNumber).Error; err != nil {
-		return 0, fmt.Errorf("failed to get max test number: %v", err)
+		Select("COALESCE(MAX(turn_number), 0)").
+		Scan(&maxTurnNumber).Error; err != nil {
+		return 0, fmt.Errorf("failed to get max turn number: %v", err)
 	}
-	return maxTestNumber + 1, nil
+	return maxTurnNumber + 1, nil
 }
 
 // deletePlaygroundSession 删除 Playground 会话
@@ -578,4 +589,235 @@ func deletePlaygroundSession(sessionID string) error {
 	}
 
 	return tx.Commit().Error
+}
+
+// createPlaygroundRecord 在指定 playground 中创建记录
+func createPlaygroundRecord(playgroundSessionID string, req *CreatePlaygroundRecordRequest) (*PlaygroundRecord, error) {
+	// 检查 playground 会话是否存在
+	var playgroundSession PlaygroundSession
+	if err := db.Where("id = ?", playgroundSessionID).First(&playgroundSession).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("playground session not found")
+		}
+		return nil, fmt.Errorf("failed to check playground session: %v", err)
+	}
+
+	// 获取原始记录
+	var originalRecord Record
+	if err := db.Where("id = ?", req.OriginalRecordID).First(&originalRecord).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("original record not found")
+		}
+		return nil, fmt.Errorf("failed to get original record: %v", err)
+	}
+
+	// 检查轮次是否已存在
+	var existingRecord PlaygroundRecord
+	if err := db.Where("playground_session_id = ? AND turn_number = ?", playgroundSessionID, req.TurnNumber).First(&existingRecord).Error; err == nil {
+		return nil, fmt.Errorf("turn number %d already exists in this playground session", req.TurnNumber)
+	}
+
+	// 创建 playground 记录
+	playgroundRecord := &PlaygroundRecord{
+		ID:                  uuid.New().String(),
+		PlaygroundSessionID: playgroundSessionID,
+		TurnNumber:          req.TurnNumber,
+		OriginalRecordID:    req.OriginalRecordID,
+		Request:             originalRecord.Request,
+		Response:            originalRecord.Response,
+		Status:              originalRecord.Status,
+		ErrorMsg:            originalRecord.ErrorMsg,
+		Provider:            "",
+		Model:               "",
+		Config:              "",
+	}
+
+	if err := db.Create(playgroundRecord).Error; err != nil {
+		return nil, fmt.Errorf("failed to create playground record: %v", err)
+	}
+
+	return playgroundRecord, nil
+}
+
+// executePlaygroundDebug 执行 playground 调试
+func executePlaygroundDebug(playgroundSessionID string, turnNumber int, newRequest interface{}, provider string, model string, config interface{}) (*PlaygroundRecord, error) {
+	// 获取配置
+	cfg := GetConfig()
+
+	// 根据provider选择配置
+	var apiKey string
+	var baseURL string
+
+	// 不区分大小写查找provider
+	var providerConfig ProviderConfig
+	var found bool
+	for key, config := range cfg.Providers {
+		if strings.EqualFold(key, provider) || strings.EqualFold(config.Name, provider) {
+			providerConfig = config
+			found = true
+			break
+		}
+	}
+
+	if found {
+		apiKey = providerConfig.APIKey
+		baseURL = providerConfig.BaseURL
+	}
+
+	if apiKey == "" {
+		return nil, fmt.Errorf("API key not configured for provider: %s", provider)
+	}
+
+	// 创建客户端配置
+	clientConfig := openai.DefaultConfig(apiKey)
+	if baseURL != "" {
+		clientConfig.BaseURL = baseURL
+	}
+
+	// 创建客户端
+	client := openai.NewClientWithConfig(clientConfig)
+
+	// 解析新的请求数据
+	requestJSON, err := json.Marshal(newRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	// 尝试解析为ChatCompletion请求
+	var chatReq openai.ChatCompletionRequest
+	if err := json.Unmarshal(requestJSON, &chatReq); err == nil {
+		// 设置正确的模型名称
+		if model != "" {
+			chatReq.Model = model
+		}
+
+		// 应用调试配置
+		if config != nil {
+			configMap, ok := config.(map[string]interface{})
+			if ok {
+				if temp, exists := configMap["temperature"]; exists {
+					if tempFloat, ok := temp.(float64); ok {
+						chatReq.Temperature = float32(tempFloat)
+					}
+				}
+				if maxTokens, exists := configMap["max_tokens"]; exists {
+					if maxTokensInt, ok := maxTokens.(int); ok {
+						chatReq.MaxTokens = maxTokensInt
+					}
+				}
+				if topP, exists := configMap["top_p"]; exists {
+					if topPFloat, ok := topP.(float64); ok {
+						chatReq.TopP = float32(topPFloat)
+					}
+				}
+				if freqPenalty, exists := configMap["frequency_penalty"]; exists {
+					if freqPenaltyFloat, ok := freqPenalty.(float64); ok {
+						chatReq.FrequencyPenalty = float32(freqPenaltyFloat)
+					}
+				}
+				if presPenalty, exists := configMap["presence_penalty"]; exists {
+					if presPenaltyFloat, ok := presPenalty.(float64); ok {
+						chatReq.PresencePenalty = float32(presPenaltyFloat)
+					}
+				}
+			}
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+		defer cancel()
+
+		// 调用OpenAI API
+		resp, err := client.CreateChatCompletion(ctx, chatReq)
+
+		// 保存调试结果
+		status := "success"
+		errorMsg := ""
+		if err != nil {
+			status = "error"
+			errorMsg = err.Error()
+		}
+
+		// 更新 playground 记录
+		if err := updatePlaygroundRecord(playgroundSessionID, turnNumber, newRequest, resp, status, errorMsg, provider, model, config); err != nil {
+			return nil, err
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		responseJSON, err := json.Marshal(resp)
+		if err != nil {
+			return nil, err
+		}
+
+		return &PlaygroundRecord{
+			ID:                  uuid.New().String(),
+			PlaygroundSessionID: playgroundSessionID,
+			TurnNumber:          turnNumber,
+			Request:             string(requestJSON),
+			Response:            string(responseJSON),
+			Status:              status,
+			Provider:            provider,
+			Model:               model,
+			Config: func() string {
+				if config != nil {
+					if b, err := json.Marshal(config); err == nil {
+						return string(b)
+					}
+				}
+				return ""
+			}(),
+		}, nil
+	}
+
+	return nil, fmt.Errorf("unsupported request type")
+}
+
+// updatePlaygroundRecord 更新 playground 记录
+func updatePlaygroundRecord(playgroundSessionID string, turnNumber int, request interface{}, response interface{}, status string, errorMsg string, provider string, model string, config interface{}) error {
+	// 序列化数据
+	requestJSON, err := json.Marshal(request)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %v", err)
+	}
+
+	var responseJSON []byte
+	if response != nil {
+		responseJSON, err = json.Marshal(response)
+		if err != nil {
+			return fmt.Errorf("failed to marshal response: %v", err)
+		}
+	}
+
+	var configJSON []byte
+	if config != nil {
+		configJSON, err = json.Marshal(config)
+		if err != nil {
+			return fmt.Errorf("failed to marshal config: %v", err)
+		}
+	}
+
+	// 更新记录
+	result := db.Model(&PlaygroundRecord{}).
+		Where("playground_session_id = ? AND turn_number = ?", playgroundSessionID, turnNumber).
+		Updates(map[string]interface{}{
+			"request":   string(requestJSON),
+			"response":  string(responseJSON),
+			"status":    status,
+			"error_msg": errorMsg,
+			"provider":  provider,
+			"model":     model,
+			"config":    string(configJSON),
+		})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update playground record: %v", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("playground record not found")
+	}
+
+	return nil
 }
