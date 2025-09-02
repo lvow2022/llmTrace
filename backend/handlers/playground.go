@@ -5,13 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"llmTrace/models"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sashabaranov/go-openai"
 	"go.uber.org/zap"
 )
+
+// GlobalConfig 全局配置变量
+var GlobalConfig interface{}
+
+// SetGlobalConfig 设置全局配置
+func SetGlobalConfig(config interface{}) {
+	GlobalConfig = config
+}
 
 // CreatePlaygroundRequest 创建 Playground 请求
 type CreatePlaygroundRequest struct {
@@ -415,12 +422,30 @@ func createDebugRecord(debugSessionID string, req *CreateDebugRecordRequest) (in
 }
 
 func executeDebug(debugSessionID string, turnNumber int, newRequest interface{}, provider string, model string, config interface{}) (interface{}, error) {
-	// 获取配置 - 从环境变量获取 API 密钥
-	openaiAPIKey := os.Getenv("OPENAI_API_KEY")
-	deepseekAPIKey := os.Getenv("LLMTRACE_PROVIDERS_DEEPSEEK_API_KEY")
-	deepseekBaseURL := os.Getenv("LLMTRACE_PROVIDERS_DEEPSEEK_BASE_URL")
-	if deepseekBaseURL == "" {
-		deepseekBaseURL = "https://api.deepseek.com"
+	// 直接使用全局配置
+	cfg := GlobalConfig
+	if cfg == nil {
+		return nil, fmt.Errorf("configuration not loaded")
+	}
+
+	// 获取提供商配置
+	providerConfig, exists := cfg.(map[string]interface{})["Providers"].(map[string]interface{})[provider]
+	if !exists {
+		return nil, fmt.Errorf("provider %s not configured", provider)
+	}
+
+	// 使用强类型访问配置
+	providerCfg := providerConfig.(map[string]interface{})
+	enabled := providerCfg["Enabled"].(bool)
+	apiKey := providerCfg["APIKey"].(string)
+	baseURL := providerCfg["BaseURL"].(string)
+
+	if !enabled {
+		return nil, fmt.Errorf("provider %s is disabled", provider)
+	}
+
+	if apiKey == "" {
+		return nil, fmt.Errorf("API key not configured for provider: %s", provider)
 	}
 
 	// 记录开始时间
@@ -430,14 +455,7 @@ func executeDebug(debugSessionID string, turnNumber int, newRequest interface{},
 	var response interface{}
 	var err error
 
-	switch provider {
-	case "openai":
-		response, err = executeOpenAIRequest(newRequest, model, config, openaiAPIKey)
-	case "deepseek":
-		response, err = executeDeepSeekRequest(newRequest, model, config, deepseekAPIKey, deepseekBaseURL)
-	default:
-		return nil, fmt.Errorf("unsupported provider: %s", provider)
-	}
+	response, err = executeRequest(newRequest, model, config, apiKey, baseURL)
 
 	if err != nil {
 		// 记录错误
@@ -520,89 +538,13 @@ func executeDebug(debugSessionID string, turnNumber int, newRequest interface{},
 	return response, nil
 }
 
-// executeOpenAIRequest 执行 OpenAI 请求
-func executeOpenAIRequest(request interface{}, model string, config interface{}, apiKey string) (interface{}, error) {
+// executeRequest 执行统一的请求（支持所有 OpenAI 兼容的提供商）
+func executeRequest(request interface{}, model string, config interface{}, apiKey string, baseURL string) (interface{}, error) {
 	if apiKey == "" {
-		return nil, fmt.Errorf("OpenAI API key not configured")
+		return nil, fmt.Errorf("API key not configured")
 	}
 
-	// 创建 OpenAI 客户端
-	client := openai.NewClient(apiKey)
-
-	// 解析请求内容
-	requestBytes, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	// 解析配置
-	var configMap map[string]interface{}
-	if config != nil {
-		if configBytes, marshalErr := json.Marshal(config); marshalErr == nil {
-			if unmarshalErr := json.Unmarshal(configBytes, &configMap); unmarshalErr != nil {
-				zap.L().Warn("Failed to parse config", zap.Error(unmarshalErr))
-			}
-		}
-	}
-
-	// 构造 OpenAI 请求
-	openaiReq := openai.ChatCompletionRequest{
-		Model: model,
-		Messages: []openai.ChatCompletionMessage{
-			{
-				Role:    openai.ChatMessageRoleUser,
-				Content: string(requestBytes),
-			},
-		},
-		Stream: false, // 非流式
-	}
-
-	// 应用配置参数
-	if configMap != nil {
-		if temperature, exists := configMap["temperature"]; exists {
-			if temp, ok := temperature.(float64); ok {
-				tempFloat32 := float32(temp)
-				openaiReq.Temperature = tempFloat32
-			}
-		}
-		if maxTokens, exists := configMap["max_tokens"]; exists {
-			if max, ok := maxTokens.(float64); ok {
-				openaiReq.MaxTokens = int(max)
-			}
-		}
-		if topP, exists := configMap["top_p"]; exists {
-			if tp, ok := topP.(float64); ok {
-				tpFloat32 := float32(tp)
-				openaiReq.TopP = tpFloat32
-			}
-		}
-	}
-
-	// 发送请求
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	resp, err := client.CreateChatCompletion(ctx, openaiReq)
-	if err != nil {
-		return nil, fmt.Errorf("OpenAI API request failed: %v", err)
-	}
-
-	// 返回响应
-	return map[string]interface{}{
-		"id":      resp.ID,
-		"model":   resp.Model,
-		"choices": resp.Choices,
-		"usage":   resp.Usage,
-	}, nil
-}
-
-// executeDeepSeekRequest 执行 DeepSeek 请求
-func executeDeepSeekRequest(request interface{}, model string, config interface{}, apiKey string, baseURL string) (interface{}, error) {
-	if apiKey == "" {
-		return nil, fmt.Errorf("DeepSeek API key not configured")
-	}
-
-	// 创建 DeepSeek 客户端（使用 OpenAI 兼容的客户端）
+	// 创建客户端配置
 	clientConfig := openai.DefaultConfig(apiKey)
 	if baseURL != "" {
 		clientConfig.BaseURL = baseURL
@@ -625,8 +567,8 @@ func executeDeepSeekRequest(request interface{}, model string, config interface{
 		}
 	}
 
-	// 构造 DeepSeek 请求
-	deepseekReq := openai.ChatCompletionRequest{
+	// 构造请求
+	chatReq := openai.ChatCompletionRequest{
 		Model: model,
 		Messages: []openai.ChatCompletionMessage{
 			{
@@ -642,18 +584,18 @@ func executeDeepSeekRequest(request interface{}, model string, config interface{
 		if temperature, exists := configMap["temperature"]; exists {
 			if temp, ok := temperature.(float64); ok {
 				tempFloat32 := float32(temp)
-				deepseekReq.Temperature = tempFloat32
+				chatReq.Temperature = tempFloat32
 			}
 		}
 		if maxTokens, exists := configMap["max_tokens"]; exists {
 			if max, ok := maxTokens.(float64); ok {
-				deepseekReq.MaxTokens = int(max)
+				chatReq.MaxTokens = int(max)
 			}
 		}
 		if topP, exists := configMap["top_p"]; exists {
 			if tp, ok := topP.(float64); ok {
 				tpFloat32 := float32(tp)
-				deepseekReq.TopP = tpFloat32
+				chatReq.TopP = tpFloat32
 			}
 		}
 	}
@@ -662,9 +604,9 @@ func executeDeepSeekRequest(request interface{}, model string, config interface{
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	resp, err := client.CreateChatCompletion(ctx, deepseekReq)
+	resp, err := client.CreateChatCompletion(ctx, chatReq)
 	if err != nil {
-		return nil, fmt.Errorf("DeepSeek API request failed: %v", err)
+		return nil, fmt.Errorf("API request failed: %v", err)
 	}
 
 	// 返回响应

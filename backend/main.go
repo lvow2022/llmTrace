@@ -20,6 +20,9 @@ func main() {
 		log.Fatal("Failed to initialize database:", err)
 	}
 
+	// 设置全局配置
+	handlers.SetGlobalConfig(cfg)
+
 	// 设置Gin模式
 	gin.SetMode(gin.DebugMode)
 
