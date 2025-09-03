@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt" // Added for Sscanf
 	"llmTrace/models"
 
 	"github.com/gin-gonic/gin"
@@ -22,9 +23,16 @@ func (h *Handler) HandleGetSessions(c *gin.Context) {
 
 // HandleGetSessionRecords 获取会话记录
 func (h *Handler) HandleGetSessionRecords(c *gin.Context) {
-	sessionID := c.Param("id")
-	if sessionID == "" {
+	sessionIDStr := c.Param("id")
+	if sessionIDStr == "" {
 		sendBadRequest(c, "Session ID is required")
+		return
+	}
+
+	// 将字符串ID转换为uint类型
+	var sessionID uint
+	if _, err := fmt.Sscanf(sessionIDStr, "%d", &sessionID); err != nil {
+		sendBadRequest(c, "Invalid session ID format")
 		return
 	}
 
@@ -59,7 +67,7 @@ func getSessions(page, size int) (interface{}, error) {
 }
 
 // getSessionRecordsByID 获取会话记录
-func getSessionRecordsByID(sessionID string, page, size int) (interface{}, error) {
+func getSessionRecordsByID(sessionID uint, page, size int) (interface{}, error) {
 	records, total, err := models.GetSessionRecordsByID(sessionID, page, size)
 	if err != nil {
 		return nil, err

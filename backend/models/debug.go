@@ -1,16 +1,15 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
-	"time"
-
-	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"time"
 )
 
 // Playground Playground 环境
 type Playground struct {
-	ID          string    `json:"id" gorm:"primaryKey;type:varchar(255)"`
+	ID          uint      `json:"id" gorm:"primaryKey;autoIncrement"`
 	Name        string    `json:"name" gorm:"type:varchar(255);not null"`                   // playground 名称
 	Description string    `json:"description" gorm:"type:text"`                             // playground 描述
 	Status      string    `json:"status" gorm:"type:varchar(50);not null;default:'active'"` // active/inactive
@@ -20,29 +19,29 @@ type Playground struct {
 
 // DebugSession 调试会话
 type DebugSession struct {
-	ID                string    `json:"id" gorm:"primaryKey;type:varchar(255)"`
-	PlaygroundID      string    `json:"playground_id" gorm:"type:varchar(255);not null;index"`       // playground ID
-	OriginalSessionID string    `json:"original_session_id" gorm:"type:varchar(255);not null;index"` // 来源会话ID
-	OriginalRecordID  string    `json:"original_record_id" gorm:"type:varchar(255);not null;index"`  // 来源记录ID
-	Name              string    `json:"name" gorm:"type:varchar(255);not null"`                      // 调试会话名称
-	Status            string    `json:"status" gorm:"type:varchar(50);not null;default:'active'"`    // active/completed
+	ID                uint      `json:"id" gorm:"primaryKey;autoIncrement"`
+	PlaygroundID      uint      `json:"playground_id" gorm:"not null;index"`
+	OriginalSessionID uint      `json:"original_session_id" gorm:"not null;index"`
+	OriginalRecordID  uint      `json:"original_record_id" gorm:"not null;index"`
+	Name              string    `json:"name" gorm:"type:varchar(255);not null"`
+	Status            string    `json:"status" gorm:"type:varchar(50);not null;default:'active'"`
 	CreatedAt         time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt         time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 // DebugRecord 调试记录
 type DebugRecord struct {
-	ID             string    `json:"id" gorm:"primaryKey;type:varchar(255)"`
-	DebugSessionID string    `json:"debug_session_id" gorm:"type:varchar(255);not null;index"` // 调试会话ID
-	TurnNumber     int       `json:"turn_number" gorm:"not null"`                              // 在调试会话中的轮次
-	Request        string    `json:"request" gorm:"type:text;not null"`                        // 请求内容
-	Response       string    `json:"response" gorm:"type:text"`                                // 响应内容
-	Status         string    `json:"status" gorm:"type:varchar(50);not null"`                  // success/error/pending
-	ErrorMsg       string    `json:"error_msg" gorm:"type:text"`                               // 错误信息
-	Provider       string    `json:"provider" gorm:"type:varchar(100)"`                        // 使用的提供商
-	Model          string    `json:"model" gorm:"type:varchar(100)"`                           // 使用的模型
-	Config         string    `json:"config" gorm:"type:text"`                                  // 调试配置（温度、token等）
-	Duration       int64     `json:"duration" gorm:"type:bigint"`                              // 执行时长（毫秒）
+	ID             uint      `json:"id" gorm:"primaryKey;autoIncrement"`
+	DebugSessionID uint      `json:"debug_session_id" gorm:"not null;index"`
+	TurnNumber     int       `json:"turn_number" gorm:"not null"`
+	Request        string    `json:"request" gorm:"type:text;not null"`
+	Response       string    `json:"response" gorm:"type:text"`
+	Status         string    `json:"status" gorm:"type:varchar(50);not null"`
+	ErrorMsg       string    `json:"error_msg" gorm:"type:text"`
+	Provider       string    `json:"provider" gorm:"type:varchar(100)"`
+	Model          string    `json:"model" gorm:"type:varchar(100)"`
+	Config         string    `json:"config" gorm:"type:text"`
+	Duration       int64     `json:"duration" gorm:"type:bigint"`
 	CreatedAt      time.Time `json:"created_at" gorm:"autoCreateTime;index"`
 	UpdatedAt      time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
@@ -50,14 +49,13 @@ type DebugRecord struct {
 // CreatePlayground 创建 Playground
 func CreatePlayground(name, description string) (*Playground, error) {
 	playground := &Playground{
-		ID:          uuid.New().String(),
 		Name:        name,
 		Description: description,
 		Status:      "active",
 	}
 
 	if err := db.Create(playground).Error; err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create playground: %v", err)
 	}
 
 	return playground, nil
@@ -67,13 +65,13 @@ func CreatePlayground(name, description string) (*Playground, error) {
 func GetPlaygrounds(page, size int) ([]Playground, int64, error) {
 	var total int64
 	if err := db.Model(&Playground{}).Count(&total).Error; err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("failed to count playgrounds: %v", err)
 	}
 
 	var playgrounds []Playground
 	offset := (page - 1) * size
-	if err := db.Offset(offset).Limit(size).Order("created_at DESC").Find(&playgrounds).Error; err != nil {
-		return nil, 0, err
+	if err := db.Order("created_at DESC").Offset(offset).Limit(size).Find(&playgrounds).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to query playgrounds: %v", err)
 	}
 
 	return playgrounds, total, nil
@@ -88,8 +86,7 @@ func GetPlayground(playgroundID string) (*Playground, error) {
 	return &playground, nil
 }
 
-// DeletePlayground 删除 Playground
-func DeletePlayground(playgroundID string) error {
+func DeletePlayground(playgroundID uint) error {
 	// 开始事务
 	tx := db.Begin()
 	if tx.Error != nil {
@@ -117,7 +114,7 @@ func DeletePlayground(playgroundID string) error {
 }
 
 // CreateDebugSession 创建调试会话
-func CreateDebugSession(playgroundID, originalSessionID, originalRecordID, name string) (*DebugSession, error) {
+func CreateDebugSession(playgroundID, originalSessionID, originalRecordID uint, name string) (*DebugSession, error) {
 	// 检查 playground 是否存在
 	var playground Playground
 	if err := db.Where("id = ?", playgroundID).First(&playground).Error; err != nil {
@@ -153,7 +150,6 @@ func CreateDebugSession(playgroundID, originalSessionID, originalRecordID, name 
 
 	// 创建调试会话
 	debugSession := &DebugSession{
-		ID:                uuid.New().String(),
 		PlaygroundID:      playgroundID,
 		OriginalSessionID: originalSessionID,
 		OriginalRecordID:  originalRecordID,
@@ -169,16 +165,21 @@ func CreateDebugSession(playgroundID, originalSessionID, originalRecordID, name 
 }
 
 // GetDebugSessions 获取调试会话列表
-func GetDebugSessions(playgroundID string, page, size int) ([]DebugSession, int64, error) {
+func GetDebugSessions(playgroundID uint, page, size int) ([]DebugSession, int64, error) {
 	var total int64
-	if err := db.Model(&DebugSession{}).Where("playground_id = ?", playgroundID).Count(&total).Error; err != nil {
-		return nil, 0, err
+	query := db.Model(&DebugSession{})
+	if playgroundID > 0 {
+		query = query.Where("playground_id = ?", playgroundID)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to count debug sessions: %v", err)
 	}
 
 	var debugSessions []DebugSession
 	offset := (page - 1) * size
-	if err := db.Where("playground_id = ?", playgroundID).Offset(offset).Limit(size).Order("created_at DESC").Find(&debugSessions).Error; err != nil {
-		return nil, 0, err
+	if err := query.Order("created_at DESC").Offset(offset).Limit(size).Find(&debugSessions).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to query debug sessions: %v", err)
 	}
 
 	return debugSessions, total, nil
@@ -210,38 +211,47 @@ func GetDebugSessionRecords(sessionID string, page, size int) ([]DebugRecord, in
 }
 
 // CreateDebugRecord 创建调试记录
-func CreateDebugRecord(debugSessionID string, turnNumber int, request, response, status, errorMsg, provider, model, config string) (*DebugRecord, error) {
-	// 检查调试会话是否存在
-	var debugSession DebugSession
-	if err := db.Where("id = ?", debugSessionID).First(&debugSession).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, gorm.ErrRecordNotFound
-		}
-		return nil, err
+func CreateDebugRecord(debugSessionID uint, turnNumber int, request interface{}, response interface{}, status string, errorMsg string, provider string, model string, config interface{}, duration int64) (*DebugRecord, error) {
+	// 序列化请求数据
+	requestJSON, err := json.Marshal(request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %v", err)
 	}
 
-	// 检查轮次是否已存在
-	var existingRecord DebugRecord
-	if err := db.Where("debug_session_id = ? AND turn_number = ?", debugSessionID, turnNumber).First(&existingRecord).Error; err == nil {
-		return nil, fmt.Errorf("turn number %d already exists in this debug session", turnNumber)
+	// 序列化响应数据
+	var responseJSON []byte
+	if response != nil {
+		responseJSON, err = json.Marshal(response)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal response: %v", err)
+		}
+	}
+
+	// 序列化配置数据
+	var configJSON []byte
+	if config != nil {
+		configJSON, err = json.Marshal(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal config: %v", err)
+		}
 	}
 
 	// 创建调试记录
 	debugRecord := &DebugRecord{
-		ID:             uuid.New().String(),
 		DebugSessionID: debugSessionID,
 		TurnNumber:     turnNumber,
-		Request:        request,
-		Response:       response,
+		Request:        string(requestJSON),
+		Response:       string(responseJSON),
 		Status:         status,
 		ErrorMsg:       errorMsg,
 		Provider:       provider,
 		Model:          model,
-		Config:         config,
+		Config:         string(configJSON),
+		Duration:       duration,
 	}
 
 	if err := db.Create(debugRecord).Error; err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create debug record: %v", err)
 	}
 
 	return debugRecord, nil

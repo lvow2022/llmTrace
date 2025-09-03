@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // Record 调用记录（生产环境）
 type Record struct {
-	ID         string    `json:"id" gorm:"primaryKey;type:varchar(255)"`
-	SessionID  string    `json:"session_id" gorm:"type:varchar(255);not null;index"`
+	ID         uint      `json:"id" gorm:"primaryKey;autoIncrement"`
+	SessionID  uint      `json:"session_id" gorm:"not null;index"`
 	TurnNumber int       `json:"turn_number" gorm:"not null"`
 	Request    string    `json:"request" gorm:"type:text;not null"`
 	Response   string    `json:"response" gorm:"type:text"`
@@ -23,72 +22,51 @@ type Record struct {
 }
 
 // SaveTraceRecord 保存埋点数据
-func SaveTraceRecord(sessionID string, turnNumber int, request interface{}, response interface{}, status string, errorMessage string, metadata interface{}) error {
-	// 开始事务
-	tx := db.Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// 检查或创建会话
-	if err := EnsureSession(sessionID); err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	// 序列化数据
+func SaveTraceRecord(sessionID uint, turnNumber int, request interface{}, response interface{}, status string, errorMsg string, metadata interface{}) error {
+	// 序列化请求数据
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
-		tx.Rollback()
 		return fmt.Errorf("failed to marshal request: %v", err)
 	}
 
+	// 序列化响应数据
 	var responseJSON []byte
 	if response != nil {
 		responseJSON, err = json.Marshal(response)
 		if err != nil {
-			tx.Rollback()
 			return fmt.Errorf("failed to marshal response: %v", err)
 		}
 	}
 
+	// 序列化元数据
 	var metadataJSON []byte
 	if metadata != nil {
 		metadataJSON, err = json.Marshal(metadata)
 		if err != nil {
-			tx.Rollback()
 			return fmt.Errorf("failed to marshal metadata: %v", err)
 		}
 	}
 
 	// 创建记录
 	record := &Record{
-		ID:         uuid.New().String(),
 		SessionID:  sessionID,
 		TurnNumber: turnNumber,
 		Request:    string(requestJSON),
 		Response:   string(responseJSON),
 		Status:     status,
-		ErrorMsg:   errorMessage,
+		ErrorMsg:   errorMsg,
 		Metadata:   string(metadataJSON),
 	}
 
-	if err := tx.Create(record).Error; err != nil {
-		tx.Rollback()
+	if err := db.Create(record).Error; err != nil {
 		return fmt.Errorf("failed to create record: %v", err)
 	}
 
-	// 提交事务
-	return tx.Commit().Error
+	return nil
 }
 
 // GetSessionRecordsByID 获取会话记录
-func GetSessionRecordsByID(sessionID string, page, size int) ([]Record, int64, error) {
+func GetSessionRecordsByID(sessionID uint, page, size int) ([]Record, int64, error) {
 	var total int64
 	if err := db.Model(&Record{}).Where("session_id = ?", sessionID).Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to count records: %v", err)
@@ -106,7 +84,7 @@ func GetSessionRecordsByID(sessionID string, page, size int) ([]Record, int64, e
 }
 
 // GetRecordByID 获取单条记录
-func GetRecordByID(recordID string) (*Record, error) {
+func GetRecordByID(recordID uint) (*Record, error) {
 	var record Record
 	if err := db.Where("id = ?", recordID).First(&record).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -118,7 +96,7 @@ func GetRecordByID(recordID string) (*Record, error) {
 }
 
 // DeleteRecord 删除记录
-func DeleteRecord(recordID string) error {
+func DeleteRecord(recordID uint) error {
 	result := db.Where("id = ?", recordID).Delete(&Record{})
 	if result.Error != nil {
 		return fmt.Errorf("failed to delete record: %v", result.Error)

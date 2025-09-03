@@ -20,9 +20,9 @@ type CreatePlaygroundRequest struct {
 
 // CreateDebugSessionRequest 创建调试会话请求
 type CreateDebugSessionRequest struct {
-	PlaygroundID      string `json:"playground_id" binding:"required"`       // playground ID
-	OriginalSessionID string `json:"original_session_id" binding:"required"` // 来源会话ID
-	OriginalRecordID  string `json:"original_record_id" binding:"required"`  // 来源记录ID
+	PlaygroundID      uint   `json:"playground_id" binding:"required"`       // playground ID
+	OriginalSessionID uint   `json:"original_session_id" binding:"required"` // 来源会话ID
+	OriginalRecordID  uint   `json:"original_record_id" binding:"required"`  // 来源记录ID
 	Name              string `json:"name"`                                   // 可选，自动生成
 }
 
