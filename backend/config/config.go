@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"fmt"
@@ -10,7 +10,6 @@ import (
 type Config struct {
 	Server    ServerConfig    `mapstructure:"server"`
 	Database  DatabaseConfig  `mapstructure:"database"`
-	OpenAI    OpenAIConfig    `mapstructure:"openai"`
 	Providers ProvidersConfig `mapstructure:"providers"`
 }
 
@@ -26,18 +25,13 @@ type DatabaseConfig struct {
 	DSN    string `mapstructure:"dsn"`
 }
 
-// OpenAIConfig OpenAI配置
-type OpenAIConfig struct {
-	APIKey string `mapstructure:"api_key"`
-}
-
 // ProviderConfig 单个Provider配置
 type ProviderConfig struct {
-	Name    string   `mapstructure:"name"`
-	APIKey  string   `mapstructure:"api_key"`
-	BaseURL string   `mapstructure:"base_url"`
-	Enabled bool     `mapstructure:"enabled"`
-	Models  []string `mapstructure:"models"`
+	Provider string   `mapstructure:"provider"`
+	APIKey   string   `mapstructure:"api_key"`
+	BaseURL  string   `mapstructure:"base_url"`
+	Enabled  bool     `mapstructure:"enabled"`
+	Models   []string `mapstructure:"models"`
 }
 
 // ProvidersConfig 动态Provider配置

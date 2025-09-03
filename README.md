@@ -55,7 +55,7 @@ type Session struct {
 // 调用记录（生产环境）
 type Record struct {
     ID          string    `json:"id"`
-    SessionID   string    `json:"session_id"`
+    TraceID     string    `json:"trace_id"`     // 会话标识符
     TurnNumber  int       `json:"turn_number"`  // 对话轮次
     Request     string    `json:"request"`      // 完整请求JSON
     Response    string    `json:"response"`     // 完整响应JSON
@@ -98,13 +98,13 @@ type ReplayRecord struct {
 ### 埋点数据结构
 ```go
 type TraceRequest struct {
-    SessionID    string      `json:"session_id"`
-    TurnNumber   int         `json:"turn_number"`
-    Request      interface{} `json:"request"`      // 完整请求数据
-    Response     interface{} `json:"response"`     // 完整响应数据
-    Status       string      `json:"status"`       // success/error/pending
-    ErrorMessage string      `json:"error_message"`
-    Metadata     interface{} `json:"metadata"`     // 自定义元数据
+    TraceID      string      `json:"trace_id"`      // 会话标识符
+    TurnNumber   int         `json:"turn_number"`   // 对话轮次
+    Request      interface{} `json:"request"`       // 完整请求数据
+    Response     interface{} `json:"response"`      // 完整响应数据
+    Status       string      `json:"status"`        // success/error/pending
+    ErrorMessage string      `json:"error_message"` // 错误信息
+    Metadata     interface{} `json:"metadata"`      // 自定义元数据
 }
 ```
 
@@ -117,7 +117,7 @@ POST /api/trace
 Content-Type: application/json
 
 {
-  "session_id": "session_123",
+  "trace_id": "session_123",
   "turn_number": 1,
   "request": {
     "model": "gpt-3.5-turbo",
@@ -262,18 +262,19 @@ import (
 
 // TraceRequest 埋点请求结构
 type TraceRequest struct {
-    SessionID    string      `json:"session_id"`
-    TurnNumber   int         `json:"turn_number"`
-    Request      interface{} `json:"request"`
-    Response     interface{} `json:"response"`
-    Status       string      `json:"status"`
-    ErrorMessage string      `json:"error_message"`
+    TraceID      string      `json:"trace_id"`      // 会话标识符
+    TurnNumber   int         `json:"turn_number"`   // 对话轮次
+    Request      interface{} `json:"request"`       // 完整请求数据
+    Response     interface{} `json:"response"`      // 完整响应数据
+    Status       string      `json:"status"`        // success/error/pending
+    ErrorMessage string      `json:"error_message"` // 错误信息
+    Metadata     interface{} `json:"metadata"`      // 自定义元数据
 }
 
 // traceLLMCall 埋点LLM调用
-func traceLLMCall(sessionID string, turnNumber int, request, response interface{}, status string) {
+func traceLLMCall(traceID string, turnNumber int, request, response interface{}, status string) {
     traceData := TraceRequest{
-        SessionID:  sessionID,
+        TraceID:    traceID,
         TurnNumber: turnNumber,
         Request:    request,
         Response:   response,
@@ -293,27 +294,24 @@ func traceLLMCall(sessionID string, turnNumber int, request, response interface{
 
 // 在你的LLM调用代码中添加埋点
 func callLLM(messages []map[string]string) (interface{}, error) {
-    sessionID := "my_session_123"
-    turnNumber := 1
+    traceID := "my_session_123"     // 会话标识符
+    turnNumber := 1                  // 对话轮次
     
     request := map[string]interface{}{
         "model":    "gpt-3.5-turbo",
         "messages": messages,
     }
     
-    // 埋点请求
-    traceLLMCall(sessionID, turnNumber, request, nil, "pending")
-    
     // 执行原始调用
     response, err := openaiClient.CreateChatCompletion(messages)
-    if err != nil {
-        // 埋点错误
-        traceLLMCall(sessionID, turnNumber, request, nil, "error")
-        return nil, err
-    }
     
-    // 埋点响应
-    traceLLMCall(sessionID, turnNumber, request, response, "success")
+    // 埋点：一次调用记录完整的请求和响应
+    if err != nil {
+        traceLLMCall(traceID, turnNumber, request, nil, "error")
+        return nil, err
+    } else {
+        traceLLMCall(traceID, turnNumber, request, response, "success")
+    }
     
     return response, nil
 }
@@ -323,9 +321,9 @@ func callLLM(messages []map[string]string) (interface{}, error) {
 # Python示例 - 简单集成
 import requests
 
-def trace_llm_call(session_id, turn_number, request, response, status="success"):
+def trace_llm_call(trace_id, turn_number, request, response, status="success"):
     trace_data = {
-        "session_id": session_id,
+        "trace_id": trace_id,
         "turn_number": turn_number,
         "request": request,
         "response": response,
@@ -340,17 +338,14 @@ def trace_llm_call(session_id, turn_number, request, response, status="success")
 
 # 在你的LLM调用代码中添加埋点
 def call_llm(messages):
-    session_id = "my_session_123"
+    trace_id = "my_session_123"
     turn_number = 1
-    
-    # 埋点请求
-    trace_llm_call(session_id, turn_number, {"messages": messages}, None, "pending")
     
     # 执行原始调用
     response = openai.chat.completions.create(messages=messages)
     
-    # 埋点响应
-    trace_llm_call(session_id, turn_number, {"messages": messages}, response.model_dump(), "success")
+    # 埋点：一次调用记录完整的请求和响应
+    trace_llm_call(trace_id, turn_number, {"messages": messages}, response.model_dump(), "success")
     
     return response
 ```
@@ -367,17 +362,17 @@ def call_llm(messages):
 ### 埋点数据流程
 ```
 1. 用户代码调用LLM → 获取请求和响应
-2. 构造埋点数据 → 包含完整信息
+2. 构造埋点数据 → 包含完整的请求、响应和状态
 3. 异步发送到Trace服务 → POST /api/trace
-4. 服务保存数据 → 存储到SQLite
+4. 服务保存数据 → 一条记录包含完整的调用信息
 5. 返回确认 → 用户代码继续执行
 ```
 
 ### 会话管理流程
 ```
-1. 埋点数据包含session_id → 用户指定或自动生成
+1. 埋点数据包含trace_id → 用户指定或自动生成
 2. 服务查找会话 → 存在则关联，不存在则创建
-3. 轮次管理 → 基于session_id自动递增
+3. 轮次管理 → 基于trace_id自动递增
 4. 数据存储 → 保存完整记录
 ```
 

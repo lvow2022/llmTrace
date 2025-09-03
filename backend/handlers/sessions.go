@@ -7,7 +7,7 @@ import (
 )
 
 // HandleGetSessions 获取会话列表
-func HandleGetSessions(c *gin.Context) {
+func (h *Handler) HandleGetSessions(c *gin.Context) {
 	page, size := parsePaginationParams(c, 1, 20)
 
 	// 获取会话列表
@@ -21,7 +21,7 @@ func HandleGetSessions(c *gin.Context) {
 }
 
 // HandleGetSessionRecords 获取会话记录
-func HandleGetSessionRecords(c *gin.Context) {
+func (h *Handler) HandleGetSessionRecords(c *gin.Context) {
 	sessionID := c.Param("id")
 	if sessionID == "" {
 		sendBadRequest(c, "Session ID is required")

@@ -20,48 +20,28 @@ type ModelInfo struct {
 }
 
 // HandleGetProviders 获取可用的providers
-func HandleGetProviders(c *gin.Context) {
-	if GlobalConfig == nil {
-		sendInternalServerError(c, "Configuration not loaded")
-		return
-	}
+func (h *Handler) HandleGetProviders(c *gin.Context) {
 
 	var providers []ProviderInfo
 
-	// 从全局配置获取提供商信息
-	if config, ok := GlobalConfig.(map[string]interface{}); ok {
-		if providersConfig, exists := config["Providers"]; exists {
-			if providersMap, ok := providersConfig.(map[string]interface{}); ok {
-				// 遍历所有提供商
-				for providerName, providerConfig := range providersMap {
-					if provider, ok := providerConfig.(map[string]interface{}); ok {
-						enabled := provider["Enabled"].(bool)
-						if enabled {
-							name := provider["Name"].(string)
-							models := provider["Models"].([]interface{})
-
-							// 转换模型列表
-							modelList := make([]ModelInfo, 0)
-							for _, model := range models {
-								if modelStr, ok := model.(string); ok {
-									modelList = append(modelList, ModelInfo{
-										Name:    modelStr,
-										Model:   modelStr,
-										Enabled: true,
-									})
-								}
-							}
-
-							providers = append(providers, ProviderInfo{
-								Name:    name,
-								Type:    providerName,
-								Enabled: true,
-								Models:  modelList,
-							})
-						}
-					}
-				}
+	// 遍历所有提供商
+	for _, provider := range h.conf.Providers {
+		if provider.Enabled {
+			modelList := make([]ModelInfo, 0)
+			for _, model := range provider.Models {
+				modelList = append(modelList, ModelInfo{
+					Name:    model,
+					Model:   model,
+					Enabled: true,
+				})
 			}
+
+			providers = append(providers, ProviderInfo{
+				Name:    provider.Name,
+				Type:    provider.Name,
+				Enabled: true,
+				Models:  modelList,
+			})
 		}
 	}
 

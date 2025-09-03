@@ -17,7 +17,7 @@ type TraceRequest struct {
 }
 
 // HandleTrace 处理埋点数据
-func HandleTrace(c *gin.Context) {
+func (h *Handler) HandleTrace(c *gin.Context) {
 	var trace TraceRequest
 	if err := c.ShouldBindJSON(&trace); err != nil {
 		sendBadRequest(c, "Invalid request format: "+err.Error())

@@ -12,14 +12,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// GlobalConfig 全局配置变量
-var GlobalConfig interface{}
-
-// SetGlobalConfig 设置全局配置
-func SetGlobalConfig(config interface{}) {
-	GlobalConfig = config
-}
-
 // CreatePlaygroundRequest 创建 Playground 请求
 type CreatePlaygroundRequest struct {
 	Name        string `json:"name" binding:"required"` // playground 名称
@@ -79,7 +71,7 @@ type ModelConfig struct {
 }
 
 // HandleCreatePlayground 创建 Playground
-func HandleCreatePlayground(c *gin.Context) {
+func (h *Handler) HandleCreatePlayground(c *gin.Context) {
 	var req CreatePlaygroundRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		sendBadRequest(c, "Invalid request format: "+err.Error())
@@ -97,7 +89,7 @@ func HandleCreatePlayground(c *gin.Context) {
 }
 
 // HandleCreateDebugSession 创建调试会话
-func HandleCreateDebugSession(c *gin.Context) {
+func (h *Handler) HandleCreateDebugSession(c *gin.Context) {
 	var req CreateDebugSessionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		sendBadRequest(c, "Invalid request format: "+err.Error())
@@ -115,7 +107,7 @@ func HandleCreateDebugSession(c *gin.Context) {
 }
 
 // HandleGetPlaygrounds 获取 Playground 列表
-func HandleGetPlaygrounds(c *gin.Context) {
+func (h *Handler) HandleGetPlaygrounds(c *gin.Context) {
 	page, size := parsePaginationParams(c, 1, 20)
 
 	// 获取 Playground 列表
@@ -129,7 +121,7 @@ func HandleGetPlaygrounds(c *gin.Context) {
 }
 
 // HandleGetPlayground 获取单个 Playground
-func HandleGetPlayground(c *gin.Context) {
+func (h *Handler) HandleGetPlayground(c *gin.Context) {
 	playgroundID := c.Param("id")
 	if playgroundID == "" {
 		sendBadRequest(c, "Playground ID is required")
@@ -152,7 +144,7 @@ func HandleGetPlayground(c *gin.Context) {
 }
 
 // HandleCreateDebugSessionFromRecord 从记录创建调试会话
-func HandleCreateDebugSessionFromRecord(c *gin.Context) {
+func (h *Handler) HandleCreateDebugSessionFromRecord(c *gin.Context) {
 	recordID := c.Param("record_id")
 	if recordID == "" {
 		sendBadRequest(c, "Record ID is required")
@@ -176,7 +168,7 @@ func HandleCreateDebugSessionFromRecord(c *gin.Context) {
 }
 
 // HandleGetDebugSessions 获取调试会话列表
-func HandleGetDebugSessions(c *gin.Context) {
+func (h *Handler) HandleGetDebugSessions(c *gin.Context) {
 	playgroundID := c.Param("id")
 	if playgroundID == "" {
 		sendBadRequest(c, "Playground ID is required")
@@ -196,7 +188,7 @@ func HandleGetDebugSessions(c *gin.Context) {
 }
 
 // HandleGetDebugSession 获取单个调试会话（包含所有记录）
-func HandleGetDebugSession(c *gin.Context) {
+func (h *Handler) HandleGetDebugSession(c *gin.Context) {
 	sessionID := c.Param("session_id")
 	if sessionID == "" {
 		sendBadRequest(c, "Debug Session ID is required")
@@ -219,7 +211,7 @@ func HandleGetDebugSession(c *gin.Context) {
 }
 
 // HandleDeletePlayground 删除 Playground
-func HandleDeletePlayground(c *gin.Context) {
+func (h *Handler) HandleDeletePlayground(c *gin.Context) {
 	playgroundID := c.Param("id")
 	if playgroundID == "" {
 		sendBadRequest(c, "Playground ID is required")
@@ -236,7 +228,7 @@ func HandleDeletePlayground(c *gin.Context) {
 }
 
 // HandleDeleteDebugSession 删除调试会话
-func HandleDeleteDebugSession(c *gin.Context) {
+func (h *Handler) HandleDeleteDebugSession(c *gin.Context) {
 	debugSessionID := c.Param("session_id")
 	if debugSessionID == "" {
 		sendBadRequest(c, "Debug Session ID is required")
@@ -253,7 +245,7 @@ func HandleDeleteDebugSession(c *gin.Context) {
 }
 
 // HandleCreateDebugRecord 在指定调试会话中创建记录
-func HandleCreateDebugRecord(c *gin.Context) {
+func (h *Handler) HandleCreateDebugRecord(c *gin.Context) {
 	debugSessionID := c.Param("session_id")
 	if debugSessionID == "" {
 		sendBadRequest(c, "Debug Session ID is required")
@@ -277,7 +269,7 @@ func HandleCreateDebugRecord(c *gin.Context) {
 }
 
 // HandlePlaygroundDebug 处理 Playground 调试请求
-func HandlePlaygroundDebug(c *gin.Context) {
+func (h *Handler) HandlePlaygroundDebug(c *gin.Context) {
 	debugSessionID := c.Param("debug_session_id")
 	if debugSessionID == "" {
 		sendBadRequest(c, "Debug Session ID is required")
@@ -304,7 +296,7 @@ func HandlePlaygroundDebug(c *gin.Context) {
 
 	// 执行调试
 	startTime := time.Now()
-	result, err := executeDebug(debugSessionID, req.TurnNumber, req.Context, req.UserInput, req.Provider, req.Model, req.Config)
+	result, err := h.executeDebug(debugSessionID, req.TurnNumber, req.Context, req.UserInput, req.Provider, req.Model, req.Config)
 	duration := time.Since(startTime)
 
 	if err != nil {
@@ -436,32 +428,7 @@ func createDebugRecord(debugSessionID string, req *CreateDebugRecordRequest) (in
 	return nil, nil
 }
 
-func executeDebug(debugSessionID string, turnNumber int, context []ChatMessage, userInput string, provider string, model string, config *ModelConfig) (interface{}, error) {
-	// 直接使用全局配置
-	cfg := GlobalConfig
-	if cfg == nil {
-		return nil, fmt.Errorf("configuration not loaded")
-	}
-
-	// 获取提供商配置
-	providerConfig, exists := cfg.(map[string]interface{})["Providers"].(map[string]interface{})[provider]
-	if !exists {
-		return nil, fmt.Errorf("provider %s not configured", provider)
-	}
-
-	// 使用强类型访问配置
-	providerCfg := providerConfig.(map[string]interface{})
-	enabled := providerCfg["Enabled"].(bool)
-	apiKey := providerCfg["APIKey"].(string)
-	baseURL := providerCfg["BaseURL"].(string)
-
-	if !enabled {
-		return nil, fmt.Errorf("provider %s is disabled", provider)
-	}
-
-	if apiKey == "" {
-		return nil, fmt.Errorf("API key not configured for provider: %s", provider)
-	}
+func (h *Handler) executeDebug(debugSessionID string, turnNumber int, context []ChatMessage, userInput string, provider string, model string, config *ModelConfig) (interface{}, error) {
 
 	// 记录开始时间
 	startTime := time.Now()
@@ -477,7 +444,14 @@ func executeDebug(debugSessionID string, turnNumber int, context []ChatMessage, 
 		"turn_number": turnNumber,
 	}
 
-	response, err = executeRequest(requestData, model, config, apiKey, baseURL)
+	var apiKey string
+	var baseUrl string
+	for _, v := range h.conf.Providers {
+		if v.Name == provider {
+			apiKey = v.APIKey
+		}
+	}
+	response, err = executeRequest(requestData, model, config, apiKey, baseUrl)
 
 	if err != nil {
 		// 记录错误

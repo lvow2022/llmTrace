@@ -6,13 +6,10 @@ database:
   driver: "sqlite"  # sqlite, mysql, postgres
   dsn: "./data/llmtrace.db"  # 数据库连接字符串
 
-openai:
-  api_key: ""  # 从环境变量 OPENAI_API_KEY 读取
 
 providers:
-  openai:
-    name: "OpenAI"
-    api_key: ""  # 从环境变量 LLMTRACE_PROVIDERS_OPENAI_API_KEY 读取
+  - provider: "OpenAI"
+    api_key: "123213123123123"  # 从环境变量 LLMTRACE_PROVIDERS_OPENAI_API_KEY 读取
     base_url: ""
     enabled: true
     models:
@@ -20,8 +17,7 @@ providers:
       - "gpt-4"
       - "gpt-4-turbo-preview"
 
-  deepseek:
-    name: "DeepSeek"
+  - provider: "DeepSeek"
     api_key: "sk-0a5fcce2f03f45bcb7419f70769f65d1"  # 从环境变量 LLMTRACE_PROVIDERS_DEEPSEEK_API_KEY 读取
     base_url: "https://api.deepseek.com"
     enabled: true
