@@ -6,10 +6,8 @@ import (
 
 // ProviderInfo Provider 信息
 type ProviderInfo struct {
-	Name    string      `json:"name"`
-	Type    string      `json:"type"`
-	Enabled bool        `json:"enabled"`
-	Models  []ModelInfo `json:"models"`
+	Provider string      `json:"name"`
+	Models   []ModelInfo `json:"models"`
 }
 
 // ModelInfo 模型信息
@@ -25,10 +23,10 @@ func (h *Handler) HandleGetProviders(c *gin.Context) {
 	var providers []ProviderInfo
 
 	// 遍历所有提供商
-	for _, provider := range h.conf.Providers {
-		if provider.Enabled {
+	for _, p := range h.conf.Providers {
+		if p.Enabled {
 			modelList := make([]ModelInfo, 0)
-			for _, model := range provider.Models {
+			for _, model := range p.Models {
 				modelList = append(modelList, ModelInfo{
 					Name:    model,
 					Model:   model,
@@ -37,10 +35,8 @@ func (h *Handler) HandleGetProviders(c *gin.Context) {
 			}
 
 			providers = append(providers, ProviderInfo{
-				Name:    provider.Name,
-				Type:    provider.Name,
-				Enabled: true,
-				Models:  modelList,
+				Provider: p.Provider,
+				Models:   modelList,
 			})
 		}
 	}

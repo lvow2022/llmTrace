@@ -447,7 +447,7 @@ func (h *Handler) executeDebug(debugSessionID string, turnNumber int, context []
 	var apiKey string
 	var baseUrl string
 	for _, v := range h.conf.Providers {
-		if v.Name == provider {
+		if v.Provider == provider {
 			apiKey = v.APIKey
 		}
 	}
