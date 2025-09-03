@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"llmTrace/models"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -14,9 +15,15 @@ func (h *Handler) HandleGetRecord(c *gin.Context) {
 		sendBadRequest(c, "Record ID is required")
 		return
 	}
+	// 将字符串ID转换为uint
+	id, err := strconv.ParseUint(recordID, 10, 32)
+	if err != nil {
+		sendBadRequest(c, "Invalid record ID format: "+err.Error())
+		return
+	}
 
 	// 获取记录
-	record, err := getRecordByID(recordID)
+	record, err := getRecordByID(uint(id))
 	if err != nil {
 		sendInternalServerError(c, "Failed to get record: "+err.Error())
 		return
@@ -37,9 +44,15 @@ func (h *Handler) HandleDeleteRecord(c *gin.Context) {
 		sendBadRequest(c, "Record ID is required")
 		return
 	}
+	// 将字符串ID转换为uint
+	id, err := strconv.ParseUint(recordID, 10, 32)
+	if err != nil {
+		sendBadRequest(c, "Invalid record ID format: "+err.Error())
+		return
+	}
 
 	// 删除记录
-	if err := deleteRecordByID(recordID); err != nil {
+	if err := deleteRecordByID(uint(id)); err != nil {
 		sendInternalServerError(c, "Failed to delete record: "+err.Error())
 		return
 	}
@@ -48,12 +61,12 @@ func (h *Handler) HandleDeleteRecord(c *gin.Context) {
 }
 
 // getRecordByID 获取记录
-func getRecordByID(recordID string) (interface{}, error) {
+func getRecordByID(recordID uint) (interface{}, error) {
 	return models.GetRecordByID(recordID)
 }
 
 // deleteRecordByID 删除记录
-func deleteRecordByID(recordID string) error {
+func deleteRecordByID(recordID uint) error {
 	return models.DeleteRecord(recordID)
 }
 

@@ -3,8 +3,9 @@ package models
 import (
 	"encoding/json"
 	"fmt"
-	"gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // Playground Playground 环境
@@ -186,7 +187,7 @@ func GetDebugSessions(playgroundID uint, page, size int) ([]DebugSession, int64,
 }
 
 // GetDebugSession 获取单个调试会话
-func GetDebugSession(sessionID string) (*DebugSession, error) {
+func GetDebugSession(sessionID uint) (*DebugSession, error) {
 	var debugSession DebugSession
 	if err := db.Where("id = ?", sessionID).First(&debugSession).Error; err != nil {
 		return nil, err
@@ -195,7 +196,7 @@ func GetDebugSession(sessionID string) (*DebugSession, error) {
 }
 
 // GetDebugSessionRecords 获取调试会话记录
-func GetDebugSessionRecords(sessionID string, page, size int) ([]DebugRecord, int64, error) {
+func GetDebugSessionRecords(sessionID uint, page, size int) ([]DebugRecord, int64, error) {
 	var total int64
 	if err := db.Model(&DebugRecord{}).Where("debug_session_id = ?", sessionID).Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -296,7 +297,7 @@ func UpdateDebugRecord(debugSessionID string, turnNumber int, request, response,
 }
 
 // DeleteDebugSession 删除调试会话
-func DeleteDebugSession(sessionID string) error {
+func DeleteDebugSession(sessionID uint) error {
 	// 开始事务
 	tx := db.Begin()
 	if tx.Error != nil {

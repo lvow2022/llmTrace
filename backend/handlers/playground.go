@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"llmTrace/models"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -175,10 +176,17 @@ func (h *Handler) HandleGetDebugSessions(c *gin.Context) {
 		return
 	}
 
+	// 将字符串ID转换为uint
+	id, err := strconv.ParseUint(playgroundID, 10, 32)
+	if err != nil {
+		sendBadRequest(c, "Invalid playground ID format: "+err.Error())
+		return
+	}
+
 	page, size := parsePaginationParams(c, 1, 20)
 
 	// 获取调试会话列表
-	result, err := getDebugSessions(playgroundID, page, size)
+	result, err := getDebugSessions(uint(id), page, size)
 	if err != nil {
 		sendInternalServerError(c, "Failed to get debug sessions: "+err.Error())
 		return
@@ -195,8 +203,15 @@ func (h *Handler) HandleGetDebugSession(c *gin.Context) {
 		return
 	}
 
+	// 将字符串ID转换为uint
+	id, err := strconv.ParseUint(sessionID, 10, 32)
+	if err != nil {
+		sendBadRequest(c, "Invalid session ID format: "+err.Error())
+		return
+	}
+
 	// 获取调试会话详情（包含所有记录）
-	debugSessionWithRecords, err := getDebugSessionWithRecords(sessionID)
+	debugSessionWithRecords, err := getDebugSessionWithRecords(uint(id))
 	if err != nil {
 		sendInternalServerError(c, "Failed to get debug session: "+err.Error())
 		return
@@ -218,8 +233,15 @@ func (h *Handler) HandleDeletePlayground(c *gin.Context) {
 		return
 	}
 
+	// 将字符串ID转换为uint
+	id, err := strconv.ParseUint(playgroundID, 10, 32)
+	if err != nil {
+		sendBadRequest(c, "Invalid playground ID format: "+err.Error())
+		return
+	}
+
 	// 删除 Playground
-	if err := deletePlaygroundByID(playgroundID); err != nil {
+	if err := deletePlaygroundByID(uint(id)); err != nil {
 		sendInternalServerError(c, "Failed to delete playground: "+err.Error())
 		return
 	}
@@ -235,8 +257,15 @@ func (h *Handler) HandleDeleteDebugSession(c *gin.Context) {
 		return
 	}
 
+	// 将字符串ID转换为uint
+	id, err := strconv.ParseUint(debugSessionID, 10, 32)
+	if err != nil {
+		sendBadRequest(c, "Invalid debug session ID format: "+err.Error())
+		return
+	}
+
 	// 删除调试会话
-	if err := deleteDebugSession(debugSessionID); err != nil {
+	if err := deleteDebugSession(uint(id)); err != nil {
 		sendInternalServerError(c, "Failed to delete debug session: "+err.Error())
 		return
 	}
@@ -258,8 +287,15 @@ func (h *Handler) HandleCreateDebugRecord(c *gin.Context) {
 		return
 	}
 
+	// 将字符串ID转换为uint
+	id, err := strconv.ParseUint(debugSessionID, 10, 32)
+	if err != nil {
+		sendBadRequest(c, "Invalid debug session ID format: "+err.Error())
+		return
+	}
+
 	// 创建新的调试记录（用于继续调试）
-	debugRecord, err := createDebugRecord(debugSessionID, &req)
+	debugRecord, err := createDebugRecord(uint(id), &req)
 	if err != nil {
 		sendInternalServerError(c, "Failed to create debug record: "+err.Error())
 		return
@@ -282,8 +318,15 @@ func (h *Handler) HandlePlaygroundDebug(c *gin.Context) {
 		return
 	}
 
+	// 将字符串ID转换为uint
+	id, err := strconv.ParseUint(debugSessionID, 10, 32)
+	if err != nil {
+		sendBadRequest(c, "Invalid debug session ID format: "+err.Error())
+		return
+	}
+
 	// 检查调试会话是否存在
-	debugSession, err := getDebugSession(debugSessionID)
+	debugSession, err := getDebugSession(uint(id))
 	if err != nil {
 		sendInternalServerError(c, "Failed to get debug session: "+err.Error())
 		return
@@ -351,6 +394,7 @@ func createDebugSession(req *CreateDebugSessionRequest) (interface{}, error) {
 		"", // provider 暂时为空
 		"", // model 暂时为空
 		"", // config 暂时为空
+		0,  // duration 暂时为0
 	)
 	if err != nil {
 		return nil, err
@@ -381,17 +425,17 @@ func getPlayground(playgroundID string) (interface{}, error) {
 	return nil, nil
 }
 
-func getDebugSessions(playgroundID string, page, size int) (interface{}, error) {
+func getDebugSessions(playgroundID uint, page, size int) (interface{}, error) {
 	// TODO: 实现获取调试会话列表的逻辑
 	return nil, nil
 }
 
-func getDebugSession(sessionID string) (interface{}, error) {
-	// TODO: 实现获取单个调试会话的逻辑
-	return nil, nil
+func getDebugSession(sessionID uint) (interface{}, error) {
+	// 调用 models 包中的函数来获取调试会话
+	return models.GetDebugSession(sessionID)
 }
 
-func getDebugSessionWithRecords(sessionID string) (interface{}, error) {
+func getDebugSessionWithRecords(sessionID uint) (interface{}, error) {
 	// 获取调试会话详情（包含所有记录）
 	debugSession, err := models.GetDebugSession(sessionID)
 	if err != nil {
@@ -416,12 +460,12 @@ func getDebugSessionWithRecords(sessionID string) (interface{}, error) {
 	return debugSessionWithRecords, nil
 }
 
-func deletePlaygroundByID(playgroundID string) error {
+func deletePlaygroundByID(playgroundID uint) error {
 	// TODO: 实现删除 playground 的逻辑
-	return nil
+	return models.DeletePlayground(playgroundID)
 }
 
-func createDebugRecord(debugSessionID string, req *CreateDebugRecordRequest) (interface{}, error) {
+func createDebugRecord(debugSessionID uint, req *CreateDebugRecordRequest) (interface{}, error) {
 	// TODO: 实现创建调试记录的逻辑
 	// 1. 获取下一个轮次编号
 	// 2. 创建新的调试记录
@@ -470,8 +514,15 @@ func (h *Handler) executeDebug(debugSessionID string, turnNumber int, context []
 			}
 		}
 
+		// 将字符串ID转换为uint
+		id, parseErr := strconv.ParseUint(debugSessionID, 10, 32)
+		if parseErr != nil {
+			zap.L().Error("Failed to parse debug session ID", zap.Error(parseErr))
+			return nil, err
+		}
+
 		_, createErr := models.CreateDebugRecord(
-			debugSessionID,
+			uint(id),
 			turnNumber,
 			requestStr,
 			"", // 响应为空
@@ -480,6 +531,7 @@ func (h *Handler) executeDebug(debugSessionID string, turnNumber int, context []
 			provider,
 			model,
 			configStr,
+			time.Since(startTime).Milliseconds(), // 添加duration参数
 		)
 		if createErr != nil {
 			zap.L().Error("Failed to create debug record", zap.Error(createErr))
@@ -488,7 +540,7 @@ func (h *Handler) executeDebug(debugSessionID string, turnNumber int, context []
 	}
 
 	// 计算执行时长（用于日志记录）
-	_ = time.Since(startTime).Milliseconds()
+	duration := time.Since(startTime)
 
 	// 将响应转换为字符串
 	responseStr := ""
@@ -511,9 +563,16 @@ func (h *Handler) executeDebug(debugSessionID string, turnNumber int, context []
 		}
 	}
 
+	// 将字符串ID转换为uint
+	id, parseErr := strconv.ParseUint(debugSessionID, 10, 32)
+	if parseErr != nil {
+		zap.L().Error("Failed to parse debug session ID", zap.Error(parseErr))
+		return nil, fmt.Errorf("invalid debug session ID: %v", parseErr)
+	}
+
 	// 创建调试记录
 	_, createErr := models.CreateDebugRecord(
-		debugSessionID,
+		uint(id),
 		turnNumber,
 		requestStr,
 		responseStr,
@@ -522,6 +581,7 @@ func (h *Handler) executeDebug(debugSessionID string, turnNumber int, context []
 		provider,
 		model,
 		configStr,
+		duration.Milliseconds(), // 添加duration参数
 	)
 	if createErr != nil {
 		zap.L().Error("Failed to create debug record", zap.Error(createErr))
@@ -642,8 +702,19 @@ func executeRequest(request interface{}, model string, config *ModelConfig, apiK
 }
 
 func createDebugSessionFromRecord(recordID string, req *CreateDebugSessionFromRecordRequest) (interface{}, error) {
+	// 将字符串ID转换为uint
+	recordIDUint, err := strconv.ParseUint(recordID, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("invalid record ID: %v", err)
+	}
+
+	playgroundIDUint, err := strconv.ParseUint(req.PlaygroundID, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("invalid playground ID: %v", err)
+	}
+
 	// 1. 获取原始记录
-	originalRecord, err := models.GetRecordByID(recordID)
+	originalRecord, err := models.GetRecordByID(uint(recordIDUint))
 	if err != nil {
 		return nil, err
 	}
@@ -653,9 +724,9 @@ func createDebugSessionFromRecord(recordID string, req *CreateDebugSessionFromRe
 
 	// 2. 创建 debug_session
 	debugSession, err := models.CreateDebugSession(
-		req.PlaygroundID,
+		uint(playgroundIDUint),
 		originalRecord.SessionID,
-		recordID,
+		uint(recordIDUint),
 		req.Name,
 	)
 	if err != nil {
@@ -673,6 +744,7 @@ func createDebugSessionFromRecord(recordID string, req *CreateDebugSessionFromRe
 		"", // provider 暂时为空
 		"", // model 暂时为空
 		"", // config 暂时为空
+		0,  // duration 暂时为0
 	)
 	if err != nil {
 		return nil, err
@@ -681,7 +753,7 @@ func createDebugSessionFromRecord(recordID string, req *CreateDebugSessionFromRe
 	return debugSession, nil
 }
 
-func deleteDebugSession(debugSessionID string) error {
+func deleteDebugSession(debugSessionID uint) error {
 	// 调用 models 包中的函数来删除调试会话
 	return models.DeleteDebugSession(debugSessionID)
 }
