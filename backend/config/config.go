@@ -41,7 +41,7 @@ type ProviderConfig struct {
 }
 
 // ProvidersConfig 动态Provider配置
-type ProvidersConfig map[string]ProviderConfig
+type ProvidersConfig []ProviderConfig
 
 var config *Config
 
