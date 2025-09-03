@@ -1,8 +1,9 @@
 package handlers
 
 import (
-	"github.com/gin-gonic/gin"
 	"llmTrace/config"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
@@ -31,7 +32,7 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 
 		// Playground 管理
 		api.POST("/playground", h.HandleCreatePlayground)       // 创建 playground
-		api.GET("/playground", h.HandleGetPlaygrounds)          // 获取 playground 列表
+		api.GET("/playgrounds", h.HandleGetPlaygrounds)         // 获取 playground 列表
 		api.GET("/playground/:id", h.HandleGetPlayground)       // 获取 playground 详情
 		api.DELETE("/playground/:id", h.HandleDeletePlayground) // 删除 playground
 

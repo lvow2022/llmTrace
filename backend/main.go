@@ -35,7 +35,7 @@ func main() {
 	r.Use(cors.New(config))
 
 	h := handlers.NewHandler()
-	// 设置路由
+
 	h.RegisterRoutes(r)
 
 	// 启动服务器

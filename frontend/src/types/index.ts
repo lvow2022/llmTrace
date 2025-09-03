@@ -1,66 +1,47 @@
-// API响应基础结构
-export interface APIResponse<T = any> {
-  success: boolean;
-  data?: T;
-  message?: string;
-}
-
-// 分页响应结构
-export interface PaginatedResponse<T = any> {
-  data: T[];
-  total: number;
-  page: number;
-  size: number;
-  total_pages: number;
-}
-
-// 会话数据结构（生产环境）
+// 基础数据结构
 export interface Session {
-  id: string;
+  id: number;  // 改为number类型，匹配后端的uint类型
   name: string;
+  trace_id?: string;  // 添加 trace_id 字段
   created_at: string;
 }
 
-// 调用记录数据结构（生产环境）
 export interface Record {
-  id: string;
-  session_id: string;
+  id: number;  // 改为number类型，匹配后端的uint类型
+  session_id: number;  // 改为number类型，匹配后端的uint类型
   turn_number: number;
   request: string;
   response: string;
-  status: 'success' | 'error' | 'pending';
+  status: string;
   error_msg: string;
   metadata: string;
   created_at: string;
 }
 
-// Playground环境
+export interface PlaygroundSession {
+  id: number;  // 改为number类型，匹配后端的uint类型
+  name: string;
+  description?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// 添加正确的Playground类型定义，匹配后端返回的数据结构
 export interface Playground {
-  id: string;
+  id: number;  // 匹配后端的uint类型
   name: string;
   description: string;
-  status: 'active' | 'inactive';
+  status: string;
   created_at: string;
   updated_at: string;
 }
 
-// 调试会话数据结构
-export interface DebugSession {
+export interface PlaygroundRecord {
   id: string;
-  playground_id: string;
-  original_session_id: string;
-  original_record_id: string;
-  name: string;
-  status: 'active' | 'completed';
-  created_at: string;
-  updated_at: string;
-}
-
-// 调试记录数据结构
-export interface DebugRecord {
-  id: string;
-  debug_session_id: string;
+  playground_session_id: string;
   turn_number: number;
+  original_record_id: string;
   request: string;
   response: string;
   status: string;
@@ -68,156 +49,104 @@ export interface DebugRecord {
   provider: string;
   model: string;
   config: string;
-  duration: number;
   created_at: string;
   updated_at: string;
 }
 
-// 调试会话详情（包含所有记录）
-export interface DebugSessionWithRecords extends DebugSession {
-  records: DebugRecord[];
+// 调试会话相关类型
+export interface DebugSession {
+  id: number;  // 改为number类型，匹配后端的uint类型
+  name: string;
+  playground_id: number;  // 改为number类型，匹配后端的uint类型
+  original_session_id: number;  // 改为number类型，匹配后端的uint类型
+  original_record_id: number;  // 改为number类型，匹配后端的uint类型
+  status: string;
+  created_at: string;
+  updated_at: string;
 }
 
-// 埋点请求数据结构
-export interface TraceRequest {
-  trace_id: string;
-  turn_number: number;
-  request: any;
-  response?: any;
-  status: 'success' | 'error' | 'pending';
-  error_message?: string;
-  metadata?: any;
+export interface ChatMessage {
+  role: string;    // user, assistant, system
+  content: string; // 消息内容
 }
 
-// 创建Playground请求
+export interface ModelConfig {
+  temperature?: number; // 温度参数 (0.0-2.0)
+  max_tokens?: number;  // 最大token数
+  top_p?: number;       // Top-p参数 (0.0-1.0)
+  stream?: boolean;     // 是否流式响应
+}
+
+// API 请求/响应类型
 export interface CreatePlaygroundRequest {
-  name: string;
-  description?: string;
+  name: string;        // playground 名称
+  description?: string; // playground 描述
 }
 
-// 从记录创建调试会话请求
+export interface CreateDebugSessionRequest {
+  playground_id: number;      // playground ID，改为number类型
+  original_session_id: number; // 来源会话ID，改为number类型
+  original_record_id: number;  // 来源记录ID，改为number类型
+  name?: string;               // 可选，自动生成
+}
+
 export interface CreateDebugSessionFromRecordRequest {
-  playground_id: string;
-  name?: string;
+  playground_id: number;      // playground ID，改为number类型
+  name?: string;               // 可选，自动生成
 }
 
-// 调试请求
-export interface DebugRequest {
+export interface CreatePlaygroundRecordRequest {
+  original_record_id: string;
   turn_number: number;
-  request: any;
+}
+
+export interface PlaygroundDebugRequest {
+  turn_number: number;
+  context: ChatMessage[];     // 对话上下文（历史消息）
+  user_input: string;         // 用户本次输入
   provider: string;
   model: string;
-  config?: any;
+  config?: ModelConfig;       // 模型配置参数
 }
 
-// 模型信息
-export interface ModelInfo {
-  name: string;
-  model: string;
-  enabled: boolean;
+export interface APIResponse<T = any> {
+  success: boolean;
+  message: string;
+  data?: T;
 }
 
-// Provider信息
-export interface ProviderInfo {
-  name: string;
-  type: string;
-  enabled: boolean;
-  models: ModelInfo[];
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  size: number;
+  total_pages: number;
 }
 
-// 查询参数
-export interface QueryParams {
-  page?: number;
-  size?: number;
+// 组件 Props 类型
+export interface LayoutProps {
+  children: React.ReactNode;
 }
 
-// 会话查询参数
-export interface SessionQueryParams extends QueryParams {
-  // 可以添加会话特定的查询参数
+export interface DebugModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  record: Record;
 }
 
-// 记录查询参数
-export interface RecordQueryParams extends QueryParams {
-  session_id: string;
+export interface PlaygroundCardProps {
+  playground: PlaygroundSession;
+  onViewDetail: (id: string) => void;
+  onCreateDebug: (id: string) => void;
 }
 
-// Playground查询参数
-export interface PlaygroundQueryParams extends QueryParams {
-  // 可以添加Playground特定的查询参数
+export interface RecordCardProps {
+  record: Record;
+  onViewDetail: (id: string) => void;
+  onDebug: (record: Record) => void;
 }
 
-// 调试会话查询参数
-export interface DebugSessionQueryParams extends QueryParams {
-  playground_id: string;
-}
-
-// 表格列配置
-export interface TableColumn {
-  title: string;
-  dataIndex: string;
-  key: string;
-  render?: (text: any, record: any) => React.ReactNode;
-  width?: number | string;
-  ellipsis?: boolean;
-}
-
-// 菜单项配置
-export interface MenuItem {
-  key: string;
-  label: string;
-  icon?: React.ReactNode;
-  children?: MenuItem[];
-}
-
-// 重放配置
-export interface ReplayConfig {
-  id: string;
-  name: string;
-  description?: string;
-  provider: string;
-  model: string;
-  temperature: number;
-  max_tokens: number;
-  top_p: number;
-  frequency_penalty: number;
-  presence_penalty: number;
-  config?: any;
-  created_at: string;
-  updated_at: string;
-}
-
-// 重放会话
-export interface ReplaySession {
-  id: string;
-  name: string;
-  config_id: string;
-  status: 'active' | 'completed' | 'failed';
-  created_at: string;
-  updated_at: string;
-}
-
-// 重放记录
-export interface ReplayRecord {
-  id: string;
-  replay_session_id: string;
-  turn_number: number;
-  request: any;
-  response: any;
-  status: 'success' | 'error' | 'pending';
-  error_msg?: string;
-  created_at: string;
-}
-
-// 创建重放会话请求
-export interface CreateReplaySessionRequest {
-  name: string;
-  config_id: string;
-}
-
-// 重放调试请求
-export interface ReplayDebugRequest {
-  replay_session_id: string;
-  turn_number: number;
-  request: any;
-  config?: any;
+export interface SessionCardProps {
+  session: Session;
+  onViewDetail: (id: string) => void;
 }

@@ -1,0 +1,241 @@
+import React, { useEffect, useState, useCallback } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { 
+  Bug, 
+  ArrowLeft,
+  CheckCircle,
+  XCircle,
+  Clock
+} from 'lucide-react';
+import { useAppStore } from '../store';
+import { recordsAPI } from '../services/api';
+import { Record } from '../types';
+import DebugModal from '../components/DebugModal';
+import Button from '../components/ui/Button';
+
+const RecordDetail: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const { setCurrentRecord } = useAppStore();
+  const [record, setRecord] = useState<Record | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+  const [showDebugModal, setShowDebugModal] = useState(false);
+
+  const fetchRecord = useCallback(async (recordId: number) => {
+    try {
+      setLoading(true);
+      setError('');
+      const data = await recordsAPI.getRecord(recordId);
+      setRecord(data);
+      setCurrentRecord(data);
+    } catch (err) {
+      console.error('获取记录详情失败:', err);
+      setError('获取记录详情失败');
+    } finally {
+      setLoading(false);
+    }
+  }, [setCurrentRecord]);
+
+  useEffect(() => {
+    if (id) {
+      fetchRecord(parseInt(id));  // 将字符串ID转换为数字
+    }
+  }, [id, fetchRecord]);
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'success':
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'error':
+        return <XCircle className="w-5 h-5 text-red-500" />;
+      case 'pending':
+        return <Clock className="w-5 h-5 text-yellow-500" />;
+      default:
+        return <Clock className="w-5 h-5 text-gray-500" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'success':
+        return 'bg-green-100 text-green-800';
+      case 'error':
+        return 'bg-red-100 text-red-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">加载记录详情中...</p>
+      </div>
+    );
+  }
+
+  if (error || !record) {
+    return (
+      <div className="text-center py-12">
+        <XCircle className="mx-auto h-12 w-12 text-red-400" />
+        <h3 className="mt-2 text-sm font-medium text-gray-900">加载失败</h3>
+        <p className="mt-1 text-sm text-gray-500">{error || '记录不存在'}</p>
+        <div className="mt-6">
+          <Link
+            to="/sessions"
+            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+          >
+            返回会话列表
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* 面包屑导航 */}
+      <nav className="flex items-center space-x-2 text-sm text-gray-500">
+        <Link to="/sessions" className="hover:text-gray-700">会话管理</Link>
+        <span>/</span>
+        <Link to={`/sessions/${record.session_id}`} className="hover:text-gray-700">
+          会话 {record.session_id}
+        </Link>
+        <span>/</span>
+        <span className="text-gray-900">记录详情</span>
+      </nav>
+
+      {/* 页面标题和操作 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <Link
+            to={`/sessions/${record.session_id}`}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">记录详情</h1>
+            <div className="text-sm text-gray-600">
+              <Link to={`/sessions/${record.session_id}`} className="hover:text-gray-700">
+                会话 {record.session_id}
+              </Link>
+              {' - '}
+              <span>轮次 {record.turn_number}</span>
+            </div>
+            
+            <div className="mt-2">
+              <Link
+                to={`/sessions/${record.session_id}`}
+                className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+              >
+                查看会话详情
+              </Link>
+            </div>
+          </div>
+        </div>
+        
+        <Button
+          onClick={() => setShowDebugModal(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+        >
+          <Bug className="w-4 h-4 mr-2" />
+          开始调试
+        </Button>
+      </div>
+
+      {/* 记录基本信息 */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-medium text-gray-900 mb-4">基本信息</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">记录ID</label>
+            <p className="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">
+              {record.id}
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">会话ID</label>
+            <p className="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">
+              {record.session_id}
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">轮次</label>
+            <p className="text-sm text-gray-900">{record.turn_number}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">状态</label>
+            <div className="flex items-center space-x-2">
+              {getStatusIcon(record.status)}
+              <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>
+                {record.status}
+              </span>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">创建时间</label>
+            <p className="text-sm text-gray-900">
+              {new Date(record.created_at).toLocaleString()}
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">错误信息</label>
+            <p className="text-sm text-gray-900">
+              {record.error_msg || '无错误'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 请求和响应内容 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 请求内容 */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">请求内容</h3>
+          </div>
+          <div className="p-6">
+            <pre className="text-sm text-gray-900 bg-gray-50 p-4 rounded border overflow-x-auto">
+              {record.request}
+            </pre>
+          </div>
+        </div>
+
+        {/* 响应内容 */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">响应内容</h3>
+          </div>
+          <div className="p-6">
+            <pre className="text-sm text-gray-900 bg-gray-50 p-4 rounded border overflow-x-auto">
+              {record.response || '暂无响应'}
+            </pre>
+          </div>
+        </div>
+      </div>
+
+      {/* 元数据 */}
+      {record.metadata && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-medium text-gray-900 mb-4">元数据</h2>
+          <pre className="text-sm text-gray-900 bg-gray-50 p-4 rounded border overflow-x-auto">
+            {record.metadata}
+          </pre>
+        </div>
+      )}
+
+      {/* Debug 弹窗 */}
+      <DebugModal
+        isOpen={showDebugModal}
+        onClose={() => setShowDebugModal(false)}
+        record={record}
+      />
+    </div>
+  );
+};
+
+export default RecordDetail;
