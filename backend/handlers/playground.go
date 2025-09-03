@@ -56,11 +56,26 @@ type DebugSessionWithRecords struct {
 
 // PlaygroundDebugRequest Playground 调试请求
 type PlaygroundDebugRequest struct {
-	TurnNumber int         `json:"turn_number" binding:"required"`
-	Request    interface{} `json:"request" binding:"required"`
-	Provider   string      `json:"provider" binding:"required"`
-	Model      string      `json:"model" binding:"required"`
-	Config     interface{} `json:"config"` // 调试配置（温度、token等）
+	TurnNumber int           `json:"turn_number" binding:"required"`
+	Context    []ChatMessage `json:"context" binding:"required"`    // 对话上下文（历史消息）
+	UserInput  string        `json:"user_input" binding:"required"` // 用户本次输入
+	Provider   string        `json:"provider" binding:"required"`
+	Model      string        `json:"model" binding:"required"`
+	Config     *ModelConfig  `json:"config"` // 模型配置参数
+}
+
+// ChatMessage 聊天消息结构
+type ChatMessage struct {
+	Role    string `json:"role" binding:"required"`    // user, assistant, system
+	Content string `json:"content" binding:"required"` // 消息内容
+}
+
+// ModelConfig 模型配置参数
+type ModelConfig struct {
+	Temperature *float32 `json:"temperature"` // 温度参数 (0.0-2.0)
+	MaxTokens   *int     `json:"max_tokens"`  // 最大token数
+	TopP        *float32 `json:"top_p"`       // Top-p参数 (0.0-1.0)
+	Stream      *bool    `json:"stream"`      // 是否流式响应
 }
 
 // HandleCreatePlayground 创建 Playground
@@ -289,7 +304,7 @@ func HandlePlaygroundDebug(c *gin.Context) {
 
 	// 执行调试
 	startTime := time.Now()
-	result, err := executeDebug(debugSessionID, req.TurnNumber, req.Request, req.Provider, req.Model, req.Config)
+	result, err := executeDebug(debugSessionID, req.TurnNumber, req.Context, req.UserInput, req.Provider, req.Model, req.Config)
 	duration := time.Since(startTime)
 
 	if err != nil {
@@ -421,7 +436,7 @@ func createDebugRecord(debugSessionID string, req *CreateDebugRecordRequest) (in
 	return nil, nil
 }
 
-func executeDebug(debugSessionID string, turnNumber int, newRequest interface{}, provider string, model string, config interface{}) (interface{}, error) {
+func executeDebug(debugSessionID string, turnNumber int, context []ChatMessage, userInput string, provider string, model string, config *ModelConfig) (interface{}, error) {
 	// 直接使用全局配置
 	cfg := GlobalConfig
 	if cfg == nil {
@@ -455,7 +470,14 @@ func executeDebug(debugSessionID string, turnNumber int, newRequest interface{},
 	var response interface{}
 	var err error
 
-	response, err = executeRequest(newRequest, model, config, apiKey, baseURL)
+	// 构建完整的请求结构
+	requestData := map[string]interface{}{
+		"context":     context,
+		"user_input":  userInput,
+		"turn_number": turnNumber,
+	}
+
+	response, err = executeRequest(requestData, model, config, apiKey, baseURL)
 
 	if err != nil {
 		// 记录错误
@@ -463,10 +485,8 @@ func executeDebug(debugSessionID string, turnNumber int, newRequest interface{},
 
 		// 将请求和配置转换为字符串
 		requestStr := ""
-		if newRequest != nil {
-			if requestBytes, marshalErr := json.Marshal(newRequest); marshalErr == nil {
-				requestStr = string(requestBytes)
-			}
+		if requestBytes, marshalErr := json.Marshal(requestData); marshalErr == nil {
+			requestStr = string(requestBytes)
 		}
 
 		configStr := ""
@@ -506,10 +526,8 @@ func executeDebug(debugSessionID string, turnNumber int, newRequest interface{},
 
 	// 将请求和配置转换为字符串
 	requestStr := ""
-	if newRequest != nil {
-		if requestBytes, marshalErr := json.Marshal(newRequest); marshalErr == nil {
-			requestStr = string(requestBytes)
-		}
+	if requestBytes, marshalErr := json.Marshal(requestData); marshalErr == nil {
+		requestStr = string(requestBytes)
 	}
 
 	configStr := ""
@@ -539,7 +557,7 @@ func executeDebug(debugSessionID string, turnNumber int, newRequest interface{},
 }
 
 // executeRequest 执行统一的请求（支持所有 OpenAI 兼容的提供商）
-func executeRequest(request interface{}, model string, config interface{}, apiKey string, baseURL string) (interface{}, error) {
+func executeRequest(request interface{}, model string, config *ModelConfig, apiKey string, baseURL string) (interface{}, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("API key not configured")
 	}
@@ -557,46 +575,77 @@ func executeRequest(request interface{}, model string, config interface{}, apiKe
 		return nil, fmt.Errorf("failed to marshal request: %v", err)
 	}
 
-	// 解析配置
-	var configMap map[string]interface{}
-	if config != nil {
-		if configBytes, marshalErr := json.Marshal(config); marshalErr == nil {
-			if unmarshalErr := json.Unmarshal(configBytes, &configMap); unmarshalErr != nil {
-				zap.L().Warn("Failed to parse config", zap.Error(unmarshalErr))
+	// 构造请求
+	chatReq := openai.ChatCompletionRequest{
+		Model:    model,
+		Messages: []openai.ChatCompletionMessage{},
+		Stream:   false, // 非流式
+	}
+
+	// 解析请求结构，构建消息列表
+	var requestData map[string]interface{}
+	if err := json.Unmarshal(requestBytes, &requestData); err == nil {
+		// 添加上下文消息
+		if context, exists := requestData["context"]; exists {
+			if contextArray, ok := context.([]interface{}); ok {
+				for _, msg := range contextArray {
+					if msgMap, ok := msg.(map[string]interface{}); ok {
+						role := msgMap["role"].(string)
+						content := msgMap["content"].(string)
+
+						var openaiRole string
+						switch role {
+						case "user":
+							openaiRole = openai.ChatMessageRoleUser
+						case "assistant":
+							openaiRole = openai.ChatMessageRoleAssistant
+						case "system":
+							openaiRole = openai.ChatMessageRoleSystem
+						default:
+							openaiRole = openai.ChatMessageRoleUser
+						}
+
+						chatReq.Messages = append(chatReq.Messages, openai.ChatCompletionMessage{
+							Role:    openaiRole,
+							Content: content,
+						})
+					}
+				}
+			}
+		}
+
+		// 添加用户当前输入
+		if userInput, exists := requestData["user_input"]; exists {
+			if input, ok := userInput.(string); ok {
+				chatReq.Messages = append(chatReq.Messages, openai.ChatCompletionMessage{
+					Role:    openai.ChatMessageRoleUser,
+					Content: input,
+				})
 			}
 		}
 	}
 
-	// 构造请求
-	chatReq := openai.ChatCompletionRequest{
-		Model: model,
-		Messages: []openai.ChatCompletionMessage{
-			{
-				Role:    openai.ChatMessageRoleUser,
-				Content: string(requestBytes),
-			},
-		},
-		Stream: false, // 非流式
+	// 如果没有消息，使用原始请求作为用户输入
+	if len(chatReq.Messages) == 0 {
+		chatReq.Messages = append(chatReq.Messages, openai.ChatCompletionMessage{
+			Role:    openai.ChatMessageRoleUser,
+			Content: string(requestBytes),
+		})
 	}
 
 	// 应用配置参数
-	if configMap != nil {
-		if temperature, exists := configMap["temperature"]; exists {
-			if temp, ok := temperature.(float64); ok {
-				tempFloat32 := float32(temp)
-				chatReq.Temperature = tempFloat32
-			}
+	if config != nil {
+		if config.Temperature != nil {
+			chatReq.Temperature = *config.Temperature
 		}
-		if maxTokens, exists := configMap["max_tokens"]; exists {
-			if max, ok := maxTokens.(float64); ok {
-				chatReq.MaxTokens = int(max)
-			}
+		if config.MaxTokens != nil {
+			chatReq.MaxTokens = *config.MaxTokens
 		}
-		if topP, exists := configMap["top_p"]; exists {
-			if tp, ok := topP.(float64); ok {
-				tpFloat32 := float32(tp)
-				chatReq.TopP = tpFloat32
-			}
+		if config.TopP != nil {
+			chatReq.TopP = *config.TopP
+		}
+		if config.Stream != nil {
+			chatReq.Stream = *config.Stream
 		}
 	}
 
