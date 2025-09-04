@@ -344,7 +344,7 @@ func (h *Handler) HandlePlaygroundDebug(c *gin.Context) {
 		//	zap.String("model", req.Model),
 		//	zap.Duration("duration", duration),
 		//	zap.String("error", err.Error()))
-		//sendInternalServerError(c, "Failed to execute debug: "+err.Error())
+		sendInternalServerError(c, "Failed to execute debug: "+err.Error())
 		return
 	}
 
