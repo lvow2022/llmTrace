@@ -1,13 +1,11 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Table, Input, Button, Space, Typography } from "antd";
-import { Search, Eye } from "lucide-react";
+import { Table, Input, Button, Space, Spin } from "antd";
+import { Search, Eye, MessageSquare } from "lucide-react";
 import type { ColumnsType } from "antd/es/table";
 import { useAppStore } from "../store";
 import { sessionsAPI } from "../services/api";
 import { Session } from "../types";
-
-const { Title, Text } = Typography;
 
 const Sessions: React.FC = () => {
   const { sessions, setSessions, loading, setLoading } = useAppStore();
@@ -103,10 +101,11 @@ const Sessions: React.FC = () => {
       width: 120,
       render: (_, record) => (
         <Space size="middle">
-          <Link to={`/sessions/${record.id}`}>
-            <Button type="link" icon={<Eye size={16} />} size="small">
-              查看详情
-            </Button>
+          <Link
+            to={`/sessions/${record.id}`}
+            className="text-blue-600 hover:text-blue-800 flex items-center"
+          >
+            <Eye className="w-4 h-4 mr-1" /> 查看详情
           </Link>
         </Space>
       ),
@@ -114,49 +113,71 @@ const Sessions: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: "24px" }}>
+    <div className="space-y-6">
       {/* 页面标题 */}
-      <div style={{ marginBottom: "24px" }}>
-        <Title level={2}>会话管理</Title>
-        <Text type="secondary">管理生产环境中的对话会话和调用记录</Text>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">会话管理</h1>
+        <p className="mt-2 text-sm text-gray-600">
+          管理生产环境中的对话会话和调用记录
+        </p>
       </div>
 
       {/* 搜索框 */}
-      <div style={{ marginBottom: "16px" }}>
-        <Input.Search
-          placeholder="搜索会话名称或ID..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          prefix={<Search size={16} />}
-          style={{ maxWidth: "400px" }}
-          allowClear
-        />
-        <Text type="secondary" style={{ marginLeft: "16px" }}>
-          共 {filteredSessions.length} 个会话
-        </Text>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+          <div className="flex-1 max-w-md">
+            <Input
+              prefix={<Search className="h-5 w-5 text-gray-400" />}
+              placeholder="搜索会话名称或ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              allowClear
+            />
+          </div>
+          <div className="flex items-center space-x-3">
+            <span className="text-sm text-gray-600">
+              共 {filteredSessions.length} 个会话
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* 数据表格 */}
-      <Table
-        bordered
-        columns={columns}
-        dataSource={filteredSessions}
-        rowKey="id"
-        loading={loading.sessions}
-        pagination={{
-          total: filteredSessions.length,
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) =>
-            `第 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
-        }}
-        locale={{
-          emptyText: searchTerm ? "没有找到匹配的会话" : "暂无会话数据",
-        }}
-        scroll={{ x: 800 }}
-        size="middle"
-      />
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <Spin spinning={loading.sessions}>
+          <Table
+            bordered
+            columns={columns}
+            dataSource={filteredSessions}
+            rowKey="id"
+            pagination={{
+              total: filteredSessions.length,
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total, range) =>
+                `第 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
+            }}
+            locale={{
+              emptyText: (
+                <div className="text-center py-12">
+                  <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">
+                    {searchTerm ? "没有找到匹配的会话" : "暂无会话数据"}
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {searchTerm
+                      ? "尝试调整搜索条件"
+                      : "当有API调用时，会自动创建会话记录"}
+                  </p>
+                </div>
+              ),
+            }}
+            scroll={{ x: 800 }}
+            size="middle"
+          />
+        </Spin>
+      </div>
     </div>
   );
 };

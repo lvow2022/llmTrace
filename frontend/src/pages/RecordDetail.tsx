@@ -1,69 +1,66 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { 
-  Bug, 
-  ArrowLeft,
-  CheckCircle,
-  XCircle,
-  Clock
-} from 'lucide-react';
-import { useAppStore } from '../store';
-import { recordsAPI } from '../services/api';
-import { Record } from '../types';
-import DebugModal from '../components/DebugModal';
-import Button from '../components/ui/Button';
-import JsonViewer from '../components/JsonViewer';
-import LLMRequestViewer from '../components/LLMRequestViewer';
+import React, { useEffect, useState, useCallback } from "react";
+import { useParams, Link } from "react-router-dom";
+import { Bug, ArrowLeft, CheckCircle, XCircle, Clock } from "lucide-react";
+import { useAppStore } from "../store";
+import { recordsAPI } from "../services/api";
+import { Record } from "../types";
+import DebugModal from "../components/DebugModal";
+import Button from "../components/ui/Button";
+import JsonViewer from "../components/JsonViewer";
+import LLMRequestViewer from "../components/LLMRequestViewer";
 
 const RecordDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { setCurrentRecord } = useAppStore();
   const [record, setRecord] = useState<Record | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
   const [showDebugModal, setShowDebugModal] = useState(false);
 
-  const fetchRecord = useCallback(async (recordId: number) => {
-    try {
-      setLoading(true);
-      setError('');
-      const response = await recordsAPI.getRecord(recordId);
-      
-      // 处理API响应的嵌套结构
-      let recordData: Record;
-      if (response && typeof response === 'object') {
-        if ('data' in response && response.data) {
-          recordData = response.data as Record;
+  const fetchRecord = useCallback(
+    async (recordId: number) => {
+      try {
+        setLoading(true);
+        setError("");
+        const response = await recordsAPI.getRecord(recordId);
+
+        // 处理API响应的嵌套结构
+        let recordData: Record;
+        if (response && typeof response === "object") {
+          if ("data" in response && response.data) {
+            recordData = response.data as Record;
+          } else {
+            recordData = response as Record;
+          }
         } else {
-          recordData = response as Record;
+          throw new Error("Invalid response format");
         }
-      } else {
-        throw new Error('Invalid response format');
+
+        setRecord(recordData);
+        setCurrentRecord(recordData);
+      } catch (err) {
+        console.error("获取记录详情失败:", err);
+        setError("获取记录详情失败");
+      } finally {
+        setLoading(false);
       }
-      
-      setRecord(recordData);
-      setCurrentRecord(recordData);
-    } catch (err) {
-      console.error('获取记录详情失败:', err);
-      setError('获取记录详情失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [setCurrentRecord]);
+    },
+    [setCurrentRecord]
+  );
 
   useEffect(() => {
     if (id) {
-      fetchRecord(parseInt(id));  // 将字符串ID转换为数字
+      fetchRecord(parseInt(id)); // 将字符串ID转换为数字
     }
   }, [id, fetchRecord]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'success':
+      case "success":
         return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'error':
+      case "error":
         return <XCircle className="w-5 h-5 text-red-500" />;
-      case 'pending':
+      case "pending":
         return <Clock className="w-5 h-5 text-yellow-500" />;
       default:
         return <Clock className="w-5 h-5 text-gray-500" />;
@@ -72,17 +69,16 @@ const RecordDetail: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'success':
-        return 'bg-green-100 text-green-800';
-      case 'error':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+      case "success":
+        return "bg-green-100 text-green-800";
+      case "error":
+        return "bg-red-100 text-red-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
-
 
   if (loading) {
     return (
@@ -98,7 +94,7 @@ const RecordDetail: React.FC = () => {
       <div className="text-center py-12">
         <XCircle className="mx-auto h-12 w-12 text-red-400" />
         <h3 className="mt-2 text-sm font-medium text-gray-900">加载失败</h3>
-        <p className="mt-1 text-sm text-gray-500">{error || '记录不存在'}</p>
+        <p className="mt-1 text-sm text-gray-500">{error || "记录不存在"}</p>
         <div className="mt-6">
           <Link
             to="/sessions"
@@ -112,12 +108,17 @@ const RecordDetail: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* 面包屑导航 */}
       <nav className="flex items-center space-x-2 text-sm text-gray-500">
-        <Link to="/sessions" className="hover:text-gray-700">会话管理</Link>
+        <Link to="/sessions" className="hover:text-gray-700">
+          会话管理
+        </Link>
         <span>/</span>
-        <Link to={`/sessions/${record.session_id}`} className="hover:text-gray-700">
+        <Link
+          to={`/sessions/${record.session_id}`}
+          className="hover:text-gray-700"
+        >
           会话 {record.session_id}
         </Link>
         <span>/</span>
@@ -136,24 +137,18 @@ const RecordDetail: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">记录详情</h1>
             <div className="text-sm text-gray-600">
-              <Link to={`/sessions/${record.session_id}`} className="hover:text-gray-700">
-                会话 {record.session_id}
-              </Link>
-              {' - '}
-              <span>轮次 {record.turn_number}</span>
-            </div>
-            
-            <div className="mt-2">
               <Link
                 to={`/sessions/${record.session_id}`}
-                className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+                className="hover:text-gray-700"
               >
-                查看会话详情
+                会话 {record.session_id}
               </Link>
+              {" - "}
+              <span>轮次 {record.turn_number}</span>
             </div>
           </div>
         </div>
-        
+
         <Button
           onClick={() => setShowDebugModal(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
@@ -164,87 +159,43 @@ const RecordDetail: React.FC = () => {
       </div>
 
       {/* 记录基本信息 */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">基本信息</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">记录ID</label>
-            <p className="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">
-              {record.id}
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">会话ID</label>
-            <p className="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">
-              {record.session_id}
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">轮次</label>
-            <p className="text-sm text-gray-900 font-semibold text-blue-600">
-              #{record.turn_number}
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">状态</label>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               {getStatusIcon(record.status)}
-              <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>
+              <span
+                className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
+                  record.status
+                )}`}
+              >
                 {record.status}
               </span>
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">创建时间</label>
-            <p className="text-sm text-gray-900">
-              {new Date(record.created_at).toLocaleString('zh-CN', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
+            <div className="text-sm text-gray-500">
+              会话 {record.session_id} · 轮次 #{record.turn_number}
+            </div>
+            <div className="text-sm text-gray-500">
+              {new Date(record.created_at).toLocaleString("zh-CN", {
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
               })}
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">错误信息</label>
-            <p className={`text-sm ${record.error_msg ? 'text-red-600' : 'text-gray-500'}`}>
-              {record.error_msg || '无错误'}
-            </p>
-          </div>
-        </div>
-        
-        {/* 统计信息 */}
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">数据统计</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <div className="text-xs text-blue-600 font-medium">请求大小</div>
-              <div className="text-sm font-semibold text-blue-900">
-                {Math.round(record.request.length / 1024 * 100) / 100} KB
-              </div>
             </div>
-            <div className="bg-green-50 p-3 rounded-lg">
-              <div className="text-xs text-green-600 font-medium">响应大小</div>
-              <div className="text-sm font-semibold text-green-900">
-                {record.response ? `${Math.round(record.response.length / 1024 * 100) / 100} KB` : '0 KB'}
+            {record.error_msg && (
+              <div className="text-sm text-red-600 bg-red-50 px-2 py-1 rounded">
+                {record.error_msg}
               </div>
-            </div>
-            <div className="bg-purple-50 p-3 rounded-lg">
-              <div className="text-xs text-purple-600 font-medium">元数据大小</div>
-              <div className="text-sm font-semibold text-purple-900">
-                {record.metadata ? `${Math.round(record.metadata.length / 1024 * 100) / 100} KB` : '0 KB'}
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* 请求和响应内容 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* 请求内容 */}
-        <LLMRequestViewer 
+        <LLMRequestViewer
           data={record.request}
           title="LLM 请求"
           defaultExpanded={true}
@@ -252,7 +203,7 @@ const RecordDetail: React.FC = () => {
 
         {/* 响应内容 */}
         {record.response ? (
-          <JsonViewer 
+          <JsonViewer
             data={record.response}
             title="响应内容"
             defaultExpanded={true}
@@ -268,7 +219,9 @@ const RecordDetail: React.FC = () => {
                   <Clock className="w-6 h-6 text-gray-400" />
                 </div>
                 <p>暂无响应内容</p>
-                <p className="text-xs text-gray-400">可能请求还在处理中或发生了错误</p>
+                <p className="text-xs text-gray-400">
+                  可能请求还在处理中或发生了错误
+                </p>
               </div>
             </div>
           </div>
@@ -277,7 +230,7 @@ const RecordDetail: React.FC = () => {
 
       {/* 元数据 */}
       {record.metadata && (
-        <JsonViewer 
+        <JsonViewer
           data={record.metadata}
           title="元数据"
           defaultExpanded={false}
