@@ -1,7 +1,7 @@
-import React, { useRef, useEffect } from 'react';
-import { Send, Bot, User, Settings, Loader2 } from 'lucide-react';
-import { ChatMessage } from '../types';
-import Button from './ui/Button';
+import React, { useRef, useEffect } from "react";
+import { Send, Bot, User, Settings, Loader2 } from "lucide-react";
+import { ChatMessage } from "../types";
+import Button from "./ui/Button";
 
 interface ChatInterfaceProps {
   messages: ChatMessage[];
@@ -20,12 +20,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onSendMessage,
   isSending,
   selectedModel,
-  modelConfig
+  modelConfig,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -33,7 +33,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }, [messages]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       onSendMessage();
     }
@@ -41,16 +41,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const formatMessageContent = (content: string) => {
     // 简单的换行处理
-    return content.split('\n').map((line, index) => (
+    return content.split("\n").map((line, index) => (
       <span key={index}>
         {line}
-        {index < content.split('\n').length - 1 && <br />}
+        {index < content.split("\n").length - 1 && <br />}
       </span>
     ));
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-[600px] flex flex-col">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-[1100px] flex flex-col">
       {/* 对话头部 */}
       <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between">
@@ -75,35 +75,42 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <div className="text-center">
               <Bot className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500">开始您的调试对话</p>
-              <p className="text-sm text-gray-400 mt-1">输入消息来测试模型响应</p>
+              <p className="text-sm text-gray-400 mt-1">
+                输入消息来测试模型响应
+              </p>
             </div>
           </div>
         ) : (
           messages.map((message, index) => (
             <div
               key={index}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${
+                message.role === "user" ? "justify-end" : "justify-start"
+              }`}
             >
               <div
                 className={`max-w-[80%] p-4 rounded-lg ${
-                  message.role === 'user'
-                    ? 'bg-blue-600 text-white'
-                    : message.role === 'assistant'
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'bg-yellow-100 text-yellow-900'
+                  message.role === "user"
+                    ? "bg-blue-600 text-white"
+                    : message.role === "assistant"
+                    ? "bg-gray-100 text-gray-900"
+                    : "bg-yellow-100 text-yellow-900"
                 }`}
               >
                 <div className="flex items-center space-x-2 mb-2">
-                  {message.role === 'user' ? (
+                  {message.role === "user" ? (
                     <User className="w-4 h-4" />
-                  ) : message.role === 'assistant' ? (
+                  ) : message.role === "assistant" ? (
                     <Bot className="w-4 h-4" />
                   ) : (
                     <Settings className="w-4 h-4" />
                   )}
                   <span className="text-xs font-medium">
-                    {message.role === 'user' ? '用户' : 
-                     message.role === 'assistant' ? 'AI助手' : '系统'}
+                    {message.role === "user"
+                      ? "用户"
+                      : message.role === "assistant"
+                      ? "AI助手"
+                      : "系统"}
                   </span>
                 </div>
                 <div className="text-sm whitespace-pre-wrap">
@@ -113,7 +120,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
           ))
         )}
-        
+
         {isSending && (
           <div className="flex justify-start">
             <div className="bg-gray-100 p-4 rounded-lg">
@@ -124,7 +131,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
           </div>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -140,7 +147,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               rows={1}
               disabled={isSending}
-              style={{ minHeight: '40px', maxHeight: '120px' }}
+              style={{ minHeight: "40px", maxHeight: "120px" }}
             />
           </div>
           <Button
@@ -155,7 +162,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             )}
           </Button>
         </div>
-        
+
         {/* 输入提示 */}
         <div className="mt-2 text-xs text-gray-500">
           <span>按 Enter 发送，Shift+Enter 换行</span>
