@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "../store";
-import { playgroundsAPI, recordsAPI } from "../services/api";
+import {
+  getPlaygrounds,
+  getPlaygroundSessions,
+  createDebugSessionFromRecord,
+  createPlayground,
+} from "../services/api";
 import Modal from "./ui/Modal";
 import Button from "./ui/Button";
 
@@ -25,51 +30,12 @@ const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose, record }) => {
   const fetchPlaygrounds = useCallback(async () => {
     try {
       setLoading(true);
-      const data: any = await playgroundsAPI.getPlaygrounds();
+      const response = await getPlaygrounds();
 
-      console.log("DebugModal: API返回的原始数据:", data); // 添加调试信息
-
-      // 处理嵌套的数据结构
-      let playgroundsArray: any[] = [];
-      if (data && typeof data === "object") {
-        if (data.data && Array.isArray(data.data)) {
-          // 直接结构：{ data: [...], total: 1, page: 1, size: 20, total_pages: 1 }
-          playgroundsArray = data.data;
-          console.log(
-            "DebugModal: 使用直接结构，找到数据:",
-            playgroundsArray.length,
-            "条"
-          );
-        } else if (
-          data.data &&
-          typeof data.data === "object" &&
-          "data" in data.data
-        ) {
-          // 嵌套结构：{ data: { data: [...], total: 1, page: 1, size: 20, total_pages: 1 } }
-          playgroundsArray = data.data.data || [];
-          console.log(
-            "DebugModal: 使用嵌套结构，找到数据:",
-            playgroundsArray.length,
-            "条"
-          );
-        } else if (Array.isArray(data)) {
-          // 数组结构：直接是数据数组
-          playgroundsArray = data;
-          console.log(
-            "DebugModal: 使用数组结构，找到数据:",
-            playgroundsArray.length,
-            "条"
-          );
-        } else {
-          console.warn("DebugModal: 未知的数据结构:", data);
-        }
-      }
-
-      if (Array.isArray(playgroundsArray)) {
-        console.log("DebugModal: 设置playgrounds数据:", playgroundsArray);
-        setPlaygrounds(playgroundsArray);
+      if (response && response.data) {
+        setPlaygrounds(response.data);
       } else {
-        console.error("DebugModal: API 返回的数据格式不正确:", data);
+        console.error("DebugModal: API returned incorrect data format:", response);
         setPlaygrounds([]);
       }
     } catch (err) {
@@ -98,7 +64,7 @@ const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose, record }) => {
       setError("");
 
       // 获取 Playground 详情，查看是否已有调试会话
-      const res = await playgroundsAPI.getPlaygroundSessions(
+      const res = await getPlaygroundSessions(
         selectedPlaygroundId
       );
 
@@ -109,7 +75,7 @@ const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose, record }) => {
       let sessionId = res.data?.playground?.id;
       if (!sessionId) {
         // 创建新的调试会话
-        const debugSession = await recordsAPI.createDebugSessionFromRecord(
+        const debugSession = await createDebugSessionFromRecord(
           record.id.toString(),
           {
             playground_id: selectedPlaygroundId,
@@ -138,7 +104,7 @@ const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose, record }) => {
       setError("");
 
       // 创建新的 Playground
-      const newPlayground = await playgroundsAPI.createPlayground({ 
+      const newPlayground = await createPlayground({ 
         name: newPlaygroundName,
         description: `基于会话 ${record.session_id} 轮次 ${record.turn_number} 创建的调试环境`,
       });
@@ -147,7 +113,7 @@ const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose, record }) => {
       addPlayground(newPlayground);
 
       // 从记录创建调试会话
-      const debugSession = await recordsAPI.createDebugSessionFromRecord(
+      const debugSession = await createDebugSessionFromRecord(
         record.id.toString(),
         {
           playground_id: newPlayground.id,

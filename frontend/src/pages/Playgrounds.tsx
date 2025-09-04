@@ -13,7 +13,7 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useAppStore } from "../store";
-import { playgroundsAPI } from "../services/api";
+import { getPlaygrounds, deletePlayground } from "../services/api";
 import { Playground } from "../types";
 
 const Playgrounds: React.FC = () => {
@@ -27,39 +27,12 @@ const Playgrounds: React.FC = () => {
   const fetchPlaygrounds = useCallback(async () => {
     try {
       setLoading("playgrounds", true);
-      const data: any = await playgroundsAPI.getPlaygrounds();
+      const response = await getPlaygrounds();
 
-      console.log("API返回的原始数据:", data); // 添加调试信息
-
-      // 处理嵌套的数据结构
-      let playgroundsArray: Playground[] = [];
-      if (data && typeof data === "object") {
-        if (data.data && Array.isArray(data.data)) {
-          // 直接结构：{ data: [...], total: 1, page: 1, size: 20, total_pages: 1 }
-          playgroundsArray = data.data;
-          console.log("使用直接结构，找到数据:", playgroundsArray.length, "条");
-        } else if (
-          data.data &&
-          typeof data.data === "object" &&
-          "data" in data.data
-        ) {
-          // 嵌套结构：{ data: { data: [...], total: 1, page: 1, size: 20, total_pages: 1 } }
-          playgroundsArray = data.data.data || [];
-          console.log("使用嵌套结构，找到数据:", playgroundsArray.length, "条");
-        } else if (Array.isArray(data)) {
-          // 数组结构：直接是数据数组
-          playgroundsArray = data;
-          console.log("使用数组结构，找到数据:", playgroundsArray.length, "条");
-        } else {
-          console.warn("未知的数据结构:", data);
-        }
-      }
-
-      if (Array.isArray(playgroundsArray)) {
-        console.log("设置playgrounds数据:", playgroundsArray);
-        setPlaygrounds(playgroundsArray);
+      if (response && response.data) {
+        setPlaygrounds(response.data);
       } else {
-        console.error("API 返回的数据格式不正确:", data);
+        console.error("API returned incorrect data format:", response);
         setPlaygrounds([]);
       }
     } catch (error) {
@@ -77,7 +50,7 @@ const Playgrounds: React.FC = () => {
   const handleDeletePlayground = async (playgroundId: number) => {
     try {
       setDeletingPlaygroundId(playgroundId);
-      await playgroundsAPI.deletePlayground(playgroundId);
+      await deletePlayground(playgroundId);
       removePlayground(playgroundId);
       message.success("调试环境删除成功");
     } catch (error) {

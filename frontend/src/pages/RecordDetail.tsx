@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Bug, ArrowLeft, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useAppStore } from "../store";
-import { recordsAPI } from "../services/api";
+import { getRecord } from "../services/api";
 import { Record } from "../types";
 import DebugModal from "../components/DebugModal";
 import Button from "../components/ui/Button";
@@ -22,7 +22,7 @@ const RecordDetail: React.FC = () => {
       try {
         setLoading(true);
         setError("");
-        const response = await recordsAPI.getRecord(recordId);
+        const response = await getRecord(recordId);
 
         // 处理API响应的嵌套结构
         let recordData: Record;

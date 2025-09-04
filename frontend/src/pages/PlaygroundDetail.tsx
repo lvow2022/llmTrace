@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, MessageSquare, Play, Pause, Code } from "lucide-react";
 import { useAppStore } from "../store";
-import { playgroundsAPI, providersAPI } from "../services/api";
+import { getPlayground, getProviders, getDebugSession } from "../services/api";
 import {
   Playground,
   ChatMessage,
@@ -60,7 +60,7 @@ const PlaygroundDetail: React.FC = () => {
         setLoading(true);
         setError("");
         console.log("开始获取 playground 详情，ID:", playgroundId);
-        const response = await playgroundsAPI.getPlayground(playgroundId);
+        const response = await getPlayground(playgroundId);
         console.log("API 响应:", response);
 
         // 检查响应数据结构
@@ -86,7 +86,7 @@ const PlaygroundDetail: React.FC = () => {
   // 获取可用的提供商
   const fetchProviders = useCallback(async () => {
     try {
-      const data = await providersAPI.getProviders();
+      const data = await getProviders();
       console.log("获取到的提供商数据:", data);
       // 确保 data 是数组格式
       if (Array.isArray(data)) {
@@ -194,7 +194,7 @@ const PlaygroundDetail: React.FC = () => {
     try {
       console.log("开始调试会话:", sessionId);
       // 调用 API 获取调试会话详情
-      const debugSessionData = await playgroundsAPI.getDebugSession(
+      const debugSessionData = await getDebugSession(
         playground.id,
         sessionId
       );

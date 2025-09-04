@@ -8,7 +8,7 @@ import {
   Bug,
   Settings
 } from 'lucide-react';
-import { sessionsAPI, playgroundsAPI, providersAPI } from '../services/api';
+import { getSessions, getPlaygrounds, getProviders } from '../services/api';
 import ApiResponseViewer from '../components/ApiResponseViewer';
 
 interface ApiEndpoint {
@@ -33,7 +33,7 @@ const ApiTest: React.FC = () => {
       icon: MessageSquare,
       method: 'GET',
       path: '/api/sessions',
-      handler: sessionsAPI.getSessions,
+      handler: getSessions,
       color: 'bg-blue-500'
     },
     {
@@ -42,7 +42,7 @@ const ApiTest: React.FC = () => {
       icon: Bug,
       method: 'GET',
       path: '/api/playground',
-      handler: playgroundsAPI.getPlaygrounds,
+      handler: getPlaygrounds,
       color: 'bg-purple-500'
     },
     {
@@ -51,7 +51,7 @@ const ApiTest: React.FC = () => {
       icon: Settings,
       method: 'GET',
       path: '/api/providers',
-      handler: providersAPI.getProviders,
+      handler: getProviders,
       color: 'bg-green-500'
     }
   ];

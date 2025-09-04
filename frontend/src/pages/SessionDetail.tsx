@@ -13,7 +13,7 @@ import {
   Check,
 } from "lucide-react";
 import { useAppStore } from "../store";
-import { sessionsAPI } from "../services/api";
+import { getSessionRecords } from "../services/api";
 import { Session, Record } from "../types";
 import DebugModal from "../components/DebugModal";
 import Button from "../components/ui/Button";
@@ -38,33 +38,33 @@ const SessionDetail: React.FC = () => {
       setError("");
 
       // 获取会话记录（这里应该直接调用获取记录的API）
-      const recordsData: any = await sessionsAPI.getSessionRecords(
+      const response = await getSessionRecords(
         parseInt(id)
       ); // 转换为数字类型
-      let recordsArray: Record[] = [];
 
-      // 处理嵌套的数据结构
-      if (recordsData && typeof recordsData === "object") {
-        if (recordsData.data && Array.isArray(recordsData.data)) {
-          recordsArray = recordsData.data;
-        } else if (
-          recordsData.data &&
-          typeof recordsData.data === "object" &&
-          "data" in recordsData.data
-        ) {
-          recordsArray = recordsData.data.data || [];
-        } else if (Array.isArray(recordsData)) {
-          recordsArray = recordsData;
-        }
+      let recordsArray: Record[] = [];
+      if (response && response.data) {
+        recordsArray = response.data;
       }
 
       console.log(recordsArray);
 
-      const formattedRecords = recordsArray.map((record) => ({
-        ...record,
-        requestMessages: JSON.parse(record.request).messages,
-        responseMessages: JSON.parse(record.response).messages,
-      }));
+      const formattedRecords = recordsArray.map((record) => {
+        try {
+          return {
+            ...record,
+            requestMessages: JSON.parse(record.request).messages,
+            responseMessages: JSON.parse(record.response).messages,
+          };
+        } catch (e) {
+          console.error("Failed to parse record messages:", e);
+          return {
+            ...record,
+            requestMessages: [],
+            responseMessages: [],
+          };
+        }
+      });
 
       console.log(formattedRecords);
 

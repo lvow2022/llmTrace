@@ -8,7 +8,7 @@ import {
   Settings
 } from 'lucide-react';
 import { useAppStore } from '../store';
-import { sessionsAPI, playgroundsAPI } from '../services/api';
+import { getSessions, getPlaygrounds } from '../services/api';
 
 const Dashboard: React.FC = () => {
   const { 
@@ -34,30 +34,13 @@ const Dashboard: React.FC = () => {
       setLoading('sessions', true);
       setLoading('playgrounds', true);
 
-      const [sessionsData, playgroundsData] = await Promise.all([
-        sessionsAPI.getSessions(),
-        playgroundsAPI.getPlaygrounds()
+      const [sessionsResponse, playgroundsResponse] = await Promise.all([
+        getSessions(),
+        getPlaygrounds()
       ]);
 
-      // 处理嵌套的数据结构
-      const extractData = (data: any): any[] => {
-        if (data && typeof data === 'object') {
-          if (data.data && Array.isArray(data.data)) {
-            // 直接结构：{ data: [...], total: 1, page: 1, size: 20, total_pages: 1 }
-            return data.data;
-          } else if (data.data && typeof data.data === 'object' && 'data' in data.data) {
-            // 嵌套结构：{ data: { data: [...], total: 1, page: 1, size: 20, total_pages: 1 } }
-            return data.data.data || [];
-          } else if (Array.isArray(data)) {
-            // 数组结构：直接是数据数组
-            return data;
-          }
-        }
-        return [];
-      };
-
-      const sessionsArray = extractData(sessionsData);
-      const playgroundsArray = extractData(playgroundsData);
+      const sessionsArray = sessionsResponse?.data || [];
+      const playgroundsArray = playgroundsResponse?.data || [];
 
       setSessions(sessionsArray);
       setPlaygrounds(playgroundsArray);

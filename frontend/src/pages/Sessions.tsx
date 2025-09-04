@@ -4,7 +4,7 @@ import { Table, Input, Button, Space, Spin } from "antd";
 import { Search, Eye, MessageSquare } from "lucide-react";
 import type { ColumnsType } from "antd/es/table";
 import { useAppStore } from "../store";
-import { sessionsAPI } from "../services/api";
+import { getSessions } from "../services/api";
 import { Session } from "../types";
 
 const Sessions: React.FC = () => {
@@ -15,31 +15,11 @@ const Sessions: React.FC = () => {
   const fetchSessions = useCallback(async () => {
     try {
       setLoading("sessions", true);
-      const data: any = await sessionsAPI.getSessions();
-
-      // 处理嵌套的数据结构
-      let sessionsArray: Session[] = [];
-      if (data && typeof data === "object") {
-        if (data.data && Array.isArray(data.data)) {
-          // 直接结构：{ data: [...], total: 1, page: 1, size: 20, total_pages: 1 }
-          sessionsArray = data.data;
-        } else if (
-          data.data &&
-          typeof data.data === "object" &&
-          "data" in data.data
-        ) {
-          // 嵌套结构：{ data: { data: [...], total: 1, page: 1, size: 20, total_pages: 1 } }
-          sessionsArray = data.data.data || [];
-        } else if (Array.isArray(data)) {
-          // 数组结构：直接是数据数组
-          sessionsArray = data;
-        }
-      }
-
-      if (Array.isArray(sessionsArray)) {
-        setSessions(sessionsArray);
+      const response = await getSessions();
+      if (response && response.data) {
+        setSessions(response.data);
       } else {
-        console.error("API 返回的数据格式不正确:", data);
+        console.error("API returned incorrect data format:", response);
         setSessions([]);
       }
     } catch (error) {
