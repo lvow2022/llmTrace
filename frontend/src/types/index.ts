@@ -115,6 +115,12 @@ export interface APIResponse<T = any> {
   data?: T;
 }
 
+// Playground 详情响应类型
+export interface PlaygroundDetailResponse {
+  playground: Playground;
+  sessions: DebugSession[];
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;

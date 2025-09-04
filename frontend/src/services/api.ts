@@ -6,7 +6,8 @@ import {
   CreatePlaygroundRequest,
   PlaygroundDebugRequest,
   CreateDebugSessionFromRecordRequest,
-  APIResponse
+  APIResponse,
+  PlaygroundDetailResponse
 } from '../types';
 
 // 创建 axios 实例
@@ -56,8 +57,14 @@ export const playgroundsAPI = {
     api.get('/playgrounds'),
   
   // 获取 Playground 详情
-  getPlayground: (playgroundId: number): Promise<Playground> => 
-    api.get(`/playground/${playgroundId}`),
+  getPlayground: async (playgroundId: number): Promise<PlaygroundDetailResponse> => {
+    const response = await api.get(`/playground/${playgroundId}`);
+    // 如果后端返回的是包装格式，提取 data 字段
+    if (response && response.data) {
+      return response.data as PlaygroundDetailResponse;
+    }
+    return response as unknown as PlaygroundDetailResponse;
+  },
   
   // 创建 Playground
   createPlayground: (data: CreatePlaygroundRequest): Promise<Playground> => 
@@ -72,8 +79,17 @@ export const playgroundsAPI = {
     api.get(`/playground/${playgroundId}/sessions`),
   
   // 获取调试会话详情
-  getDebugSession: (playgroundId: number, sessionId: number): Promise<any> => 
-    api.get(`/playground/${playgroundId}/sessions/${sessionId}`),
+  getDebugSession: async (playgroundId: number, sessionId: number): Promise<any> => {
+    const response = await api.get(`/playground/${playgroundId}/sessions/${sessionId}`);
+    console.log('API 原始响应:', response);
+    // 如果后端返回的是包装格式，提取 data 字段
+    if (response && response.data) {
+      console.log('提取 data 字段:', response.data);
+      return response.data as any;
+    }
+    console.log('直接返回响应:', response);
+    return response as unknown as any;
+  },
   
   // 删除调试会话
   deleteDebugSession: (playgroundId: number, sessionId: number): Promise<void> => 

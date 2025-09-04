@@ -79,12 +79,23 @@ func GetPlaygrounds(page, size int) ([]Playground, int64, error) {
 }
 
 // GetPlayground 获取单个 Playground
-func GetPlayground(playgroundID string) (*Playground, error) {
+func GetPlayground(playgroundID uint) (*Playground, error) {
 	var playground Playground
 	if err := db.Where("id = ?", playgroundID).First(&playground).Error; err != nil {
 		return nil, err
 	}
 	return &playground, nil
+}
+
+// GetDebugSessionsByPlayground 获取指定 playground 的所有调试会话
+func GetDebugSessionsByPlayground(playgroundID uint) ([]DebugSession, error) {
+	var sessions []DebugSession
+	if err := db.Where("playground_id = ?", playgroundID).
+		Order("created_at DESC").
+		Find(&sessions).Error; err != nil {
+		return nil, fmt.Errorf("failed to get debug sessions for playground %d: %v", playgroundID, err)
+	}
+	return sessions, nil
 }
 
 func DeletePlayground(playgroundID uint) error {

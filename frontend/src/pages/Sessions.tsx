@@ -42,11 +42,11 @@ const Sessions: React.FC = () => {
     } finally {
       setLoading('sessions', false);
     }
-  }, []); // 移除依赖，避免无限循环
+  }, [setLoading, setSessions]);
 
   useEffect(() => {
     fetchSessions();
-  }, []); // 只在组件挂载时调用一次
+  }, [fetchSessions]);
 
   useEffect(() => {
     // 确保 sessions 是数组，然后进行过滤

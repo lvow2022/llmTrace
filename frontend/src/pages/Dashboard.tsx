@@ -81,11 +81,11 @@ const Dashboard: React.FC = () => {
       setLoading('sessions', false);
       setLoading('playgrounds', false);
     }
-  }, []); // 移除依赖，避免无限循环
+  }, [setLoading, setSessions, setPlaygrounds]);
 
   useEffect(() => {
     fetchDashboardData();
-  }, []); // 只在组件挂载时调用一次
+  }, [fetchDashboardData]);
 
   const StatCard = ({ title, value, icon: Icon, color, link }: any) => (
     <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow`}>

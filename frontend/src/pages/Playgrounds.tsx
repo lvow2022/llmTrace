@@ -52,11 +52,11 @@ const Playgrounds: React.FC = () => {
     } finally {
       setLoading('playgrounds', false);
     }
-  }, []); // 移除依赖，避免无限循环
+  }, [setLoading, setPlaygrounds]);
 
   useEffect(() => {
     fetchPlaygrounds();
-  }, []); // 只在组件挂载时调用一次
+  }, [fetchPlaygrounds]);
 
   useEffect(() => {
     // 确保 playgrounds 是数组，然后进行过滤

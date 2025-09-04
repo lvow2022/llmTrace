@@ -37,7 +37,7 @@ type CreateDebugRecordRequest struct {
 
 // CreateDebugSessionFromRecordRequest 从记录创建调试会话请求
 type CreateDebugSessionFromRecordRequest struct {
-	PlaygroundID string `json:"playground_id" binding:"required"` // playground ID
+	PlaygroundID uint   `json:"playground_id" binding:"required"` // playground ID
 	Name         string `json:"name"`                             // 可选，自动生成
 }
 
@@ -69,6 +69,12 @@ type ModelConfig struct {
 	MaxTokens   *int     `json:"max_tokens"`  // 最大token数
 	TopP        *float32 `json:"top_p"`       // Top-p参数 (0.0-1.0)
 	Stream      *bool    `json:"stream"`      // 是否流式响应
+}
+
+// PlaygroundDetailResponse Playground 详情响应
+type PlaygroundDetailResponse struct {
+	Playground *models.Playground    `json:"playground"`
+	Sessions   []models.DebugSession `json:"sessions"`
 }
 
 // HandleCreatePlayground 创建 Playground
@@ -121,16 +127,22 @@ func (h *Handler) HandleGetPlaygrounds(c *gin.Context) {
 	sendSuccessResponse(c, result)
 }
 
-// HandleGetPlayground 获取单个 Playground
+// HandleGetPlayground 获取单个 Playground 详情（包含关联的 sessions）
 func (h *Handler) HandleGetPlayground(c *gin.Context) {
 	playgroundID := c.Param("id")
 	if playgroundID == "" {
 		sendBadRequest(c, "Playground ID is required")
 		return
 	}
+	// 将字符串ID转换为uint
+	id, err := strconv.ParseUint(playgroundID, 10, 32)
+	if err != nil {
+		sendBadRequest(c, "Invalid playground ID format: "+err.Error())
+		return
+	}
 
 	// 获取 Playground
-	playground, err := getPlayground(playgroundID)
+	playground, err := getPlayground(uint(id))
 	if err != nil {
 		sendInternalServerError(c, "Failed to get playground: "+err.Error())
 		return
@@ -141,7 +153,44 @@ func (h *Handler) HandleGetPlayground(c *gin.Context) {
 		return
 	}
 
-	sendSuccessResponse(c, playground)
+	// 获取关联的调试会话
+	sessions, err := models.GetDebugSessionsByPlayground(uint(id))
+	if err != nil {
+		sendInternalServerError(c, "Failed to get playground sessions: "+err.Error())
+		return
+	}
+
+	// 构造响应
+	response := PlaygroundDetailResponse{
+		Playground: playground,
+		Sessions:   sessions,
+	}
+
+	sendSuccessResponse(c, response)
+}
+
+// HandleDeletePlayground 删除 Playground
+func (h *Handler) HandleDeletePlayground(c *gin.Context) {
+	playgroundID := c.Param("id")
+	if playgroundID == "" {
+		sendBadRequest(c, "Playground ID is required")
+		return
+	}
+
+	// 将字符串ID转换为uint
+	id, err := strconv.ParseUint(playgroundID, 10, 32)
+	if err != nil {
+		sendBadRequest(c, "Invalid playground ID format: "+err.Error())
+		return
+	}
+
+	// 删除 Playground
+	if err := deletePlaygroundByID(uint(id)); err != nil {
+		sendInternalServerError(c, "Failed to delete playground: "+err.Error())
+		return
+	}
+
+	sendSuccessMessage(c, "Playground deleted successfully")
 }
 
 // HandleCreateDebugSessionFromRecord 从记录创建调试会话
@@ -223,30 +272,6 @@ func (h *Handler) HandleGetDebugSession(c *gin.Context) {
 	}
 
 	sendSuccessResponse(c, debugSessionWithRecords)
-}
-
-// HandleDeletePlayground 删除 Playground
-func (h *Handler) HandleDeletePlayground(c *gin.Context) {
-	playgroundID := c.Param("id")
-	if playgroundID == "" {
-		sendBadRequest(c, "Playground ID is required")
-		return
-	}
-
-	// 将字符串ID转换为uint
-	id, err := strconv.ParseUint(playgroundID, 10, 32)
-	if err != nil {
-		sendBadRequest(c, "Invalid playground ID format: "+err.Error())
-		return
-	}
-
-	// 删除 Playground
-	if err := deletePlaygroundByID(uint(id)); err != nil {
-		sendInternalServerError(c, "Failed to delete playground: "+err.Error())
-		return
-	}
-
-	sendSuccessMessage(c, "Playground deleted successfully")
 }
 
 // HandleDeleteDebugSession 删除调试会话
@@ -420,9 +445,9 @@ func getPlaygrounds(page, size int) (interface{}, error) {
 	}, nil
 }
 
-func getPlayground(playgroundID string) (interface{}, error) {
+func getPlayground(playgroundID uint) (*models.Playground, error) {
 	// TODO: 实现获取单个 playground 的逻辑
-	return nil, nil
+	return models.GetPlayground(playgroundID)
 }
 
 func getDebugSessions(playgroundID uint, page, size int) (interface{}, error) {
@@ -708,11 +733,6 @@ func createDebugSessionFromRecord(recordID string, req *CreateDebugSessionFromRe
 		return nil, fmt.Errorf("invalid record ID: %v", err)
 	}
 
-	playgroundIDUint, err := strconv.ParseUint(req.PlaygroundID, 10, 32)
-	if err != nil {
-		return nil, fmt.Errorf("invalid playground ID: %v", err)
-	}
-
 	// 1. 获取原始记录
 	originalRecord, err := models.GetRecordByID(uint(recordIDUint))
 	if err != nil {
@@ -724,7 +744,7 @@ func createDebugSessionFromRecord(recordID string, req *CreateDebugSessionFromRe
 
 	// 2. 创建 debug_session
 	debugSession, err := models.CreateDebugSession(
-		uint(playgroundIDUint),
+		req.PlaygroundID,
 		originalRecord.SessionID,
 		uint(recordIDUint),
 		req.Name,
