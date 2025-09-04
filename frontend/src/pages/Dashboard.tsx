@@ -245,7 +245,7 @@ const Dashboard: React.FC = () => {
                 {playgrounds.slice(0, 5).map((playground) => (
                   <Link
                     key={playground.id}
-                    to={`/playgrounds/${playground.id}`}
+                    to={`/playground/${playground.id}`}
                     className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     <div>

@@ -20,8 +20,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const navigation = [
     { name: '仪表盘', href: '/', icon: LayoutDashboard },
-    { name: '会话管理', href: '/sessions', icon: MessageSquare },
-    { name: '记录管理', href: '/records', icon: FileText },
+    { name: '会话管理', href: '/sessions', icon: MessageSquare }, 
     { name: '调试环境', href: '/playgrounds', icon: Bug },
     { name: 'API 测试', href: '/api-test', icon: FileText },
     { name: '配置管理', href: '/config', icon: Settings },
