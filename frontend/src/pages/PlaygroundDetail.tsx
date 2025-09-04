@@ -194,10 +194,7 @@ const PlaygroundDetail: React.FC = () => {
     try {
       console.log("开始调试会话:", sessionId);
       // 调用 API 获取调试会话详情
-      const debugSessionData = await getDebugSession(
-        playground.id,
-        sessionId
-      );
+      const debugSessionData = await getDebugSession(playground.id, sessionId);
       console.log("调试会话数据:", debugSessionData);
       console.log("调试会话数据类型:", typeof debugSessionData);
       console.log("调试会话数据键:", Object.keys(debugSessionData || {}));
@@ -380,13 +377,13 @@ const PlaygroundDetail: React.FC = () => {
           )}
 
           {!isDebugging ? (
-            <Button
-              onClick={initializeDebugSession}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2"
+            <Link
+              to="/sessions"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md inline-flex items-center"
             >
-              <Play className="w-4 h-4 mr-2" />
-              开始调试
-            </Button>
+              <MessageSquare className="w-4 h-4 mr-2" />
+              转到会话管理
+            </Link>
           ) : (
             <Button
               onClick={() => setIsDebugging(false)}
@@ -502,22 +499,22 @@ const PlaygroundDetail: React.FC = () => {
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <MessageSquare className="w-8 h-8 text-purple-600" />
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <MessageSquare className="w-8 h-8 text-blue-600" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            准备开始调试
+            暂无调试会话数据
           </h3>
           <p className="text-gray-600 mb-6">
-            点击"开始调试"按钮来初始化调试会话，然后您可以设置模型参数、修改上下文并进行对话测试。
+            当前没有可用的调试会话数据。请先转到会话管理页面，选择一个会话进行调试。
           </p>
-          <Button
-            onClick={initializeDebugSession}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3"
+          <Link
+            to="/sessions"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-md inline-flex items-center"
           >
-            <Play className="w-5 h-5 mr-2" />
-            开始调试
-          </Button>
+            <MessageSquare className="w-5 h-5 mr-2" />
+            转到会话管理
+          </Link>
         </div>
       )}
     </div>

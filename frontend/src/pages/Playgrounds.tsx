@@ -126,7 +126,7 @@ const Playgrounds: React.FC = () => {
     {
       title: "操作",
       key: "actions",
-      width: 220,
+      width: 150,
       render: (_, record: Playground) => (
         <Space size="middle">
           <Link
@@ -134,13 +134,6 @@ const Playgrounds: React.FC = () => {
             className="text-blue-600 hover:text-blue-800"
           >
             查看详情
-          </Link>
-          <Link
-            to={`/playground/${record.id}`}
-            className="text-purple-600 hover:text-purple-800 flex items-center"
-          >
-            <Bug className="w-3 h-3 mr-1" />
-            调试
           </Link>
           <Popconfirm
             title="确定要删除这个调试环境吗？"

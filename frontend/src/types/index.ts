@@ -80,7 +80,7 @@ export interface ModelConfig {
 }
 
 // API 请求/响应类型
-export interface CreatePlaygroundRequest { 
+export interface CreatePlaygroundRequest {
   name: string; // playground 名称
   description?: string; // playground 描述
 }
