@@ -218,31 +218,31 @@ func (h *Handler) HandleCreateDebugSessionFromRecord(c *gin.Context) {
 }
 
 // HandleGetDebugSessions 获取调试会话列表
-func (h *Handler) HandleGetDebugSessions(c *gin.Context) {
-	playgroundID := c.Param("id")
-	if playgroundID == "" {
-		sendBadRequest(c, "Playground ID is required")
-		return
-	}
-
-	// 将字符串ID转换为uint
-	id, err := strconv.ParseUint(playgroundID, 10, 32)
-	if err != nil {
-		sendBadRequest(c, "Invalid playground ID format: "+err.Error())
-		return
-	}
-
-	page, size := parsePaginationParams(c, 1, 20)
-
-	// 获取调试会话列表
-	result, err := getDebugSessions(uint(id), page, size)
-	if err != nil {
-		sendInternalServerError(c, "Failed to get debug sessions: "+err.Error())
-		return
-	}
-
-	sendSuccessResponse(c, result)
-}
+//func (h *Handler) HandleGetDebugSessions(c *gin.Context) {
+//	playgroundID := c.Param("id")
+//	if playgroundID == "" {
+//		sendBadRequest(c, "Playground ID is required")
+//		return
+//	}
+//
+//	// 将字符串ID转换为uint
+//	id, err := strconv.ParseUint(playgroundID, 10, 32)
+//	if err != nil {
+//		sendBadRequest(c, "Invalid playground ID format: "+err.Error())
+//		return
+//	}
+//
+//	page, size := parsePaginationParams(c, 1, 20)
+//
+//	// 获取调试会话列表
+//	result, err := getDebugSessions(uint(id), page, size)
+//	if err != nil {
+//		sendInternalServerError(c, "Failed to get debug sessions: "+err.Error())
+//		return
+//	}
+//
+//	sendSuccessResponse(c, result)
+//}
 
 // HandleGetDebugSession 获取单个调试会话（包含所有记录）
 func (h *Handler) HandleGetDebugSession(c *gin.Context) {
@@ -298,40 +298,9 @@ func (h *Handler) HandleDeleteDebugSession(c *gin.Context) {
 	sendSuccessMessage(c, "Debug session deleted successfully")
 }
 
-// HandleCreateDebugRecord 在指定调试会话中创建记录
-func (h *Handler) HandleCreateDebugRecord(c *gin.Context) {
-	debugSessionID := c.Param("session_id")
-	if debugSessionID == "" {
-		sendBadRequest(c, "Debug Session ID is required")
-		return
-	}
-
-	var req CreateDebugRecordRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		sendBadRequest(c, "Invalid request format: "+err.Error())
-		return
-	}
-
-	// 将字符串ID转换为uint
-	id, err := strconv.ParseUint(debugSessionID, 10, 32)
-	if err != nil {
-		sendBadRequest(c, "Invalid debug session ID format: "+err.Error())
-		return
-	}
-
-	// 创建新的调试记录（用于继续调试）
-	debugRecord, err := createDebugRecord(uint(id), &req)
-	if err != nil {
-		sendInternalServerError(c, "Failed to create debug record: "+err.Error())
-		return
-	}
-
-	sendSuccessResponse(c, debugRecord)
-}
-
 // HandlePlaygroundDebug 处理 Playground 调试请求
 func (h *Handler) HandlePlaygroundDebug(c *gin.Context) {
-	debugSessionID := c.Param("debug_session_id")
+	debugSessionID := c.Param("session_id")
 	if debugSessionID == "" {
 		sendBadRequest(c, "Debug Session ID is required")
 		return
@@ -363,28 +332,28 @@ func (h *Handler) HandlePlaygroundDebug(c *gin.Context) {
 	}
 
 	// 执行调试
-	startTime := time.Now()
+	//startTime := time.Now()
 	result, err := h.executeDebug(debugSessionID, req.TurnNumber, req.Context, req.UserInput, req.Provider, req.Model, req.Config)
-	duration := time.Since(startTime)
+	//duration := time.Since(startTime)
 
 	if err != nil {
-		zapLogger.Error("debug failed",
-			zap.String("debug_session_id", debugSessionID),
-			zap.Int("turn_number", req.TurnNumber),
-			zap.String("provider", req.Provider),
-			zap.String("model", req.Model),
-			zap.Duration("duration", duration),
-			zap.String("error", err.Error()))
-		sendInternalServerError(c, "Failed to execute debug: "+err.Error())
+		//zapLogger.Error("debug failed",
+		//	zap.String("debug_session_id", debugSessionID),
+		//	zap.Int("turn_number", req.TurnNumber),
+		//	zap.String("provider", req.Provider),
+		//	zap.String("model", req.Model),
+		//	zap.Duration("duration", duration),
+		//	zap.String("error", err.Error()))
+		//sendInternalServerError(c, "Failed to execute debug: "+err.Error())
 		return
 	}
 
-	zapLogger.Info("debug finished",
-		zap.String("debug_session_id", debugSessionID),
-		zap.Int("turn_number", req.TurnNumber),
-		zap.String("provider", req.Provider),
-		zap.String("model", req.Model),
-		zap.Duration("duration", duration))
+	//zapLogger.Info("debug finished",
+	//	zap.String("debug_session_id", debugSessionID),
+	//	zap.Int("turn_number", req.TurnNumber),
+	//	zap.String("provider", req.Provider),
+	//	zap.String("model", req.Model),
+	//	zap.Duration("duration", duration))
 
 	sendSuccessResponse(c, result)
 }
@@ -446,14 +415,13 @@ func getPlaygrounds(page, size int) (interface{}, error) {
 }
 
 func getPlayground(playgroundID uint) (*models.Playground, error) {
-	// TODO: 实现获取单个 playground 的逻辑
 	return models.GetPlayground(playgroundID)
 }
 
-func getDebugSessions(playgroundID uint, page, size int) (interface{}, error) {
-	// TODO: 实现获取调试会话列表的逻辑
-	return nil, nil
-}
+//func getDebugSessions(playgroundID uint, page, size int) (interface{}, error) {
+//	// TODO: 实现获取调试会话列表的逻辑
+//	return nil, nil
+//}
 
 func getDebugSession(sessionID uint) (interface{}, error) {
 	// 调用 models 包中的函数来获取调试会话
@@ -518,6 +486,7 @@ func (h *Handler) executeDebug(debugSessionID string, turnNumber int, context []
 	for _, v := range h.conf.Providers {
 		if v.Provider == provider {
 			apiKey = v.APIKey
+			baseUrl = v.BaseURL
 		}
 	}
 	response, err = executeRequest(requestData, model, config, apiKey, baseUrl)

@@ -37,7 +37,7 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 		api.DELETE("/playground/:id", h.HandleDeletePlayground) // 删除 playground
 
 		// Debug Session 管理（在 playground 中）
-		api.GET("/playground/:id/sessions", h.HandleGetDebugSessions)                  // 获取调试会话列表
+		//api.GET("/playground/:id/sessions", h.HandleGetDebugSessions)                  // 获取调试会话列表
 		api.GET("/playground/:id/sessions/:session_id", h.HandleGetDebugSession)       // 获取调试会话详情（包含所有记录）
 		api.DELETE("/playground/:id/sessions/:session_id", h.HandleDeleteDebugSession) // 删除调试会话
 

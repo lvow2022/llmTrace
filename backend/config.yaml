@@ -9,8 +9,8 @@ database:
 
 providers:
   - provider: "OpenAI"
-    api_key: "123213123123123"  # 从环境变量 LLMTRACE_PROVIDERS_OPENAI_API_KEY 读取
-    base_url: ""
+    api_key: "123213123123123"  
+    base_url: "https://openai.com"
     enabled: true
     models:
       - "gpt-3.5-turbo"
@@ -18,7 +18,7 @@ providers:
       - "gpt-4-turbo-preview"
 
   - provider: "DeepSeek"
-    api_key: "sk-0a5fcce2f03f45bcb7419f70769f65d1"  # 从环境变量 LLMTRACE_PROVIDERS_DEEPSEEK_API_KEY 读取
+    api_key: "sk-0a5fcce2f03f45bcb7419f70769f65d1" 
     base_url: "https://api.deepseek.com"
     enabled: true
     models:
