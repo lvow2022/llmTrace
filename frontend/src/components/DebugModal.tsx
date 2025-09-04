@@ -138,7 +138,7 @@ const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose, record }) => {
       setError("");
 
       // 创建新的 Playground
-      const newPlayground = await playgroundsAPI.createPlayground({
+      const newPlayground = await playgroundsAPI.createPlayground({ 
         name: newPlaygroundName,
         description: `基于会话 ${record.session_id} 轮次 ${record.turn_number} 创建的调试环境`,
       });
@@ -271,7 +271,7 @@ const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose, record }) => {
             </div>
 
             <Button
-              onClick={handleStartDebug}
+              onClick={handleCreateAndStart}
               disabled={!newPlaygroundName.trim() || loading}
               className="w-full"
             >
