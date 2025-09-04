@@ -98,9 +98,7 @@ const PlaygroundDetail: React.FC = () => {
     } catch (err) {
       console.error("获取提供商列表失败:", err);
       // 设置默认的提供商列表
-      setAvailableProviders([
-        { name: "openai", models: ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"] },
-      ]);
+      setAvailableProviders([]);
     }
   }, []);
 

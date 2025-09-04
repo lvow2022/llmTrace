@@ -135,7 +135,10 @@ export const debug = (
 // --- Providers ---
 
 // 获取可用的提供商和模型信息
-export const getProviders = (): Promise<any[]> => api.get("/providers");
+export const getProviders = async (): Promise<any[]> => {
+  const response = await api.get("/providers");
+  return response.data as any[];
+};
 
 // --- Trace ---
 
