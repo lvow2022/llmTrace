@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #3b4151;
+            background-color: #f5f7fa;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #1a202c;
+            border-bottom: 3px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+        details {
+            background: #fff;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            border: 1px solid #e2e8f0;
+        }
+        summary {
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 1rem;
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            align-items: center;
+        }
+        details[open] summary {
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .endpoint-content {
+            padding: 1rem;
+            border-top: 1px solid #e2e8f0;
+        }
+        .method {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 4px;
+            padding: 6px 12px;
+            color: white;
+            margin-right: 1rem;
+            width: 80px;
+            text-align: center;
+        }
+        .method-post { background-color: #49cc90; }
+        .method-get { background-color: #61affe; }
+        .method-delete { background-color: #f93e3e; }
+
+        .endpoint-path {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 1.1rem;
+            color: #2d3748;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #2d3748;
+            border-bottom: 2px solid #edf2f7;
+            padding-bottom: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        td code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: #edf2f7;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background-color: #2d3748;
+            color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        pre code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>API Documentation</h1>
+
+    <!-- Endpoint: POST /api/trace -->
+    <details>
+        <summary>
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/trace</span>
+        </summary>
+        <div class="endpoint-content">
+            <p>Tracing endpoint to record a step in a session.</p>
+            <h3>Request Body</h3>
+            <pre><code class="language-json">
+{
+    "trace_id": "session_abc123",
+    "turn_number": 1,
+    "request": {
+        "model": "gpt-4",
+        "messages": [
+            {
+                "role": "user",
+                "content": "Hello, world!"
+            }
+        ]
+    },
+    "response": {
+        "id": "chatcmpl-123",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "gpt-4-0613",
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": "Hello! How can I assist you today?"
+                },
+                "finish_reason": "stop"
+            }
+        ]
+    },
+    "status": "success",
+    "error_message": "",
+    "metadata": {
+        "user_id": "user_456",
+        "tags": ["test", "example"]
+    }
+}
+            </code></pre>
+            <h3>Responses</h3>
+            <p><strong>200 OK</strong></p>
+            <pre><code class="language-json">
+{
+    "success": true,
+    "message": "Trace data saved successfully",
+    "data": null
+}
+            </code></pre>
+        </div>
+    </details>
+
+    <!-- Endpoint: GET /api/sessions -->
+    <details>
+        <summary>
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/sessions</span>
+        </summary>
+        <div class="endpoint-content">
+            <p>Get a paginated list of sessions.</p>
+            <h3>Query Parameters</h3>
+            <table>
+                <thead>
+                    <tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>page</code></td><td>query</td><td>integer</td><td>Page number (default: 1)</td></tr>
+                    <tr><td><code>size</code></td><td>query</td><td>integer</td><td>Number of items per page (default: 20)</td></tr>
+                </tbody>
+            </table>
+            <h3>Responses</h3>
+            <p><strong>200 OK</strong></p>
+            <pre><code class="language-json">
+{
+    "success": true,
+    "message": "Success",
+    "data": {
+        "data": [
+            {
+                "id": "sess_xyz789",
+                "name": "User Conversation 1",
+                "created_at": "2023-10-27T10:00:00Z"
+            }
+        ],
+        "total": 1,
+        "page": 1,
+        "size": 20,
+        "total_pages": 1
+    }
+}
+            </code></pre>
+        </div>
+    </details>
+
+    <!-- Endpoint: GET /api/sessions/:id/records -->
+    <details>
+        <summary>
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/sessions/:id/records</span>
+        </summary>
+        <div class="endpoint-content">
+            <p>Get a paginated list of records for a specific session.</p>
+            <h3>Path Parameters</h3>
+            <table>
+                <thead>
+                    <tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>id</code></td><td>path</td><td>string</td><td>The ID of the session.</td></tr>
+                </tbody>
+            </table>
+            <h3>Query Parameters</h3>
+             <table>
+                <thead>
+                    <tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>page</code></td><td>query</td><td>integer</td><td>Page number (default: 1)</td></tr>
+                    <tr><td><code>size</code></td><td>query</td><td>integer</td><td>Number of items per page (default: 50)</td></tr>
+                </tbody>
+            </table>
+            <h3>Responses</h3>
+            <p><strong>200 OK</strong></p>
+            <pre><code class="language-json">
+{
+    "success": true,
+    "message": "Success",
+    "data": {
+        "data": [
+            {
+                "id": "rec_abc123",
+                "session_id": "sess_xyz789",
+                "turn_number": 1,
+                "request": "{\\"model\\":\\"gpt-4\\",\\"messages\\":[{\\"role\\":\\"user\\",\\"content\\":\\"Hello, world!\\"}]}",
+                "response": "{\\"choices\\":[{\\"message\\":{\\"content\\":\\"Hello! How can I help you?\\"}}]}",
+                "status": "success",
+                "error_msg": "",
+                "metadata": "{\\"user_id\\":\\"user_456\\"}",
+                "created_at": "2023-10-27T10:00:05Z"
+            }
+        ],
+        "total": 1,
+        "page": 1,
+        "size": 50,
+        "total_pages": 1
+    }
+}
+            </code></pre>
+        </div>
+    </details>
+
+    <!-- Endpoint: GET /api/records/:id -->
+    <details>
+        <summary>
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/records/:id</span>
+        </summary>
+        <div class="endpoint-content">
+            <p>Get details of a single record.</p>
+            <h3>Path Parameters</h3>
+            <table>
+                <thead>
+                    <tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>id</code></td><td>path</td><td>string</td><td>The ID of the record.</td></tr>
+                </tbody>
+            </table>
+            <h3>Responses</h3>
+            <p><strong>200 OK</strong></p>
+            <pre><code class="language-json">
+{
+    "success": true,
+    "message": "Success",
+    "data": {
+        "id": "rec_abc123",
+        "session_id": "sess_xyz789",
+        "turn_number": 1,
+        "request": "{\\"model\\":\\"gpt-4\\",\\"messages\\":[{\\"role\\":\\"user\\",\\"content\\":\\"Hello, world!\\"}]}",
+        "response": "{\\"choices\\":[{\\"message\\":{\\"content\\":\\"Hello! How can I help you?\\"}}]}",
+        "status": "success",
+        "error_msg": "",
+        "metadata": "{\\"user_id\\":\\"user_456\\"}",
+        "created_at": "2023-10-27T10:00:05Z"
+    }
+}
+            </code></pre>
+        </div>
+    </details>
+    
+    <!-- Endpoint: POST /api/playground -->
+    <details>
+        <summary>
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/playground</span>
+        </summary>
+        <div class="endpoint-content">
+            <p>Create a new playground.</p>
+            <h3>Request Body</h3>
+            <pre><code class="language-json">
+{
+    "name": "My New Playground",
+    "description": "A description for the playground."
+}
+            </code></pre>
+            <h3>Responses</h3>
+            <p><strong>200 OK</strong></p>
+            <pre><code class="language-json">
+{
+    "success": true,
+    "message": "Success",
+    "data": {
+        "ID": 1,
+        "CreatedAt": "2023-10-27T11:00:00Z",
+        "UpdatedAt": "2023-10-27T11:00:00Z",
+        "DeletedAt": null,
+        "name": "My New Playground",
+        "description": "A description for the playground."
+    }
+}
+            </code></pre>
+        </div>
+    </details>
+
+    <!-- Endpoint: GET /api/playgrounds -->
+    <details>
+        <summary>
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/playgrounds</span>
+        </summary>
+        <div class="endpoint-content">
+            <p>Get a paginated list of playgrounds.</p>
+            <h3>Query Parameters</h3>
+            <table>
+                <thead>
+                    <tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>page</code></td><td>query</td><td>integer</td><td>Page number (default: 1)</td></tr>
+                    <tr><td><code>size</code></td><td>query</td><td>integer</td><td>Number of items per page (default: 20)</td></tr>
+                </tbody>
+            </table>
+            <h3>Responses</h3>
+            <p><strong>200 OK</strong></p>
+            <pre><code class="language-json">
+{
+    "success": true,
+    "message": "Success",
+    "data": {
+        "data": [
+            {
+                "ID": 1,
+                "CreatedAt": "2023-10-27T11:00:00Z",
+                "UpdatedAt": "2023-10-27T11:00:00Z",
+                "DeletedAt": null,
+                "name": "My New Playground",
+                "description": "A description for the playground."
+            }
+        ],
+        "total": 1,
+        "page": 1,
+        "size": 20,
+        "total_pages": 1
+    }
+}
+            </code></pre>
+        </div>
+    </details>
+
+    <!-- Endpoint: GET /api/playground/:id -->
+    <details>
+        <summary>
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/playground/:id</span>
+        </summary>
+        <div class="endpoint-content">
+            <p>Get details of a single playground, including its debug sessions.</p>
+            <h3>Path Parameters</h3>
+            <table>
+                <thead>
+                    <tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>id</code></td><td>path</td><td>integer</td><td>The ID of the playground.</td></tr>
+                </tbody>
+            </table>
+            <h3>Responses</h3>
+            <p><strong>200 OK</strong></p>
+            <pre><code class="language-json">
+{
+    "success": true,
+    "message": "Success",
+    "data": {
+        "playground": {
+            "ID": 1,
+            "CreatedAt": "2023-10-27T11:00:00Z",
+            "UpdatedAt": "2023-10-27T11:00:00Z",
+            "DeletedAt": null,
+            "name": "My New Playground",
+            "description": "A description for the playground."
+        },
+        "sessions": [
+            {
+                "ID": 1,
+                "CreatedAt": "2023-10-27T11:05:00Z",
+                "UpdatedAt": "2023-10-27T11:05:00Z",
+                "DeletedAt": null,
+                "playground_id": 1,
+                "original_session_id": 101,
+                "original_record_id": 202,
+                "name": "Debug Session for Record 202"
+            }
+        ]
+    }
+}
+            </code></pre>
+        </div>
+    </details>
+
+    <!-- Endpoint: DELETE /api/playground/:id -->
+    <details>
+        <summary>
+            <span class="method method-delete">DELETE</span>
+            <span class="endpoint-path">/api/playground/:id</span>
+        </summary>
+        <div class="endpoint-content">
+            <p>Delete a playground.</p>
+            <h3>Path Parameters</h3>
+            <table>
+                <thead>
+                    <tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>id</code></td><td>path</td><td>integer</td><td>The ID of the playground to delete.</td></tr>
+                </tbody>
+            </table>
+            <h3>Responses</h3>
+            <p><strong>200 OK</strong></p>
+            <pre><code class="language-json">
+{
+    "success": true,
+    "message": "Playground deleted successfully",
+    "data": null
+}
+            </code></pre>
+        </div>
+    </details>
+    
+    <!-- Endpoint: GET /api/playground/:id/sessions/:session_id -->
+    <details>
+        <summary>
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/playground/:id/sessions/:session_id</span>
+        </summary>
+        <div class="endpoint-content">
+            <p>Get details of a single debug session, including all its records.</p>
+            <h3>Path Parameters</h3>
+            <table>
+                <thead>
+                    <tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>id</code></td><td>path</td><td>integer</td><td>The ID of the playground.</td></tr>
+                    <tr><td><code>session_id</code></td><td>path</td><td>integer</td><td>The ID of the debug session.</td></tr>
+                </tbody>
+            </table>
+            <h3>Responses</h3>
+            <p><strong>200 OK</strong></p>
+            <pre><code class="language-json">
+{
+    "success": true,
+    "message": "Success",
+    "data": {
+        "DebugSession": {
+            "ID": 1,
+            "CreatedAt": "2023-10-27T11:05:00Z",
+            "UpdatedAt": "2023-10-27T11:05:00Z",
+            "DeletedAt": null,
+            "playground_id": 1,
+            "original_session_id": 101,
+            "original_record_id": 202,
+            "name": "Debug Session for Record 202"
+        },
+        "records": [
+            {
+                "ID": 1,
+                "CreatedAt": "2023-10-27T11:05:00Z",
+                "UpdatedAt": "2023-10-27T11:05:00Z",
+                "DeletedAt": null,
+                "debug_session_id": 1,
+                "turn_number": 1,
+                "request": "{\\"model\\":\\"gpt-4\\",\\"messages\\":[{\\"role\\":\\"user\\",\\"content\\":\\"Hello again!\\"}]}",
+                "response": "{\\"choices\\":[{\\"message\\":{\\"content\\":\\"Hi! How can I help this time?\\"}}]}",
+                "status": "success",
+                "error_msg": "",
+                "provider": "openai",
+                "model": "gpt-4",
+                "config": "{\\"temperature\\":0.7}",
+                "duration": 500
+            }
+        ]
+    }
+}
+            </code></pre>
+        </div>
+    </details>
+
+    <!-- Endpoint: DELETE /api/playground/:id/sessions/:session_id -->
+    <details>
+        <summary>
+            <span class="method method-delete">DELETE</span>
+            <span class="endpoint-path">/api/playground/:id/sessions/:session_id</span>
+        </summary>
+        <div class="endpoint-content">
+            <p>Delete a debug session.</p>
+            <h3>Path Parameters</h3>
+            <table>
+                <thead>
+                    <tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>id</code></td><td>path</td><td>integer</td><td>The ID of the playground.</td></tr>
+                    <tr><td><code>session_id</code></td><td>path</td><td>integer</td><td>The ID of the debug session to delete.</td></tr>
+                </tbody>
+            </table>
+            <h3>Responses</h3>
+            <p><strong>200 OK</strong></p>
+            <pre><code class="language-json">
+{
+    "success": true,
+    "message": "Debug session deleted successfully",
+    "data": null
+}
+            </code></pre>
+        </div>
+    </details>
+
+    <!-- Endpoint: POST /api/records/:record_id/create-debug-session -->
+    <details>
+        <summary>
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/records/:record_id/create-debug-session</span>
+        </summary>
+        <div class="endpoint-content">
+            <p>Create a new debug session from an existing record.</p>
+            <h3>Path Parameters</h3>
+            <table>
+                <thead>
+                    <tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>record_id</code></td><td>path</td><td>string</td><td>The ID of the source record.</td></tr>
+                </tbody>
+            </table>
+            <h3>Request Body</h3>
+            <pre><code class="language-json">
+{
+    "playground_id": 1,
+    "name": "Debug from Record 123"
+}
+            </code></pre>
+            <h3>Responses</h3>
+            <p><strong>200 OK</strong></p>
+            <pre><code class="language-json">
+{
+    "success": true,
+    "message": "Success",
+    "data": {
+        "ID": 2,
+        "CreatedAt": "2023-10-27T12:00:00Z",
+        "UpdatedAt": "2023-10-27T12:00:00Z",
+        "DeletedAt": null,
+        "playground_id": 1,
+        "original_session_id": 101,
+        "original_record_id": 123,
+        "name": "Debug from Record 123"
+    }
+}
+            </code></pre>
+        </div>
+    </details>
+
+    <!-- Endpoint: POST /api/playground/:id/sessions/:session_id/debug -->
+    <details>
+        <summary>
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/playground/:id/sessions/:session_id/debug</span>
+        </summary>
+        <div class="endpoint-content">
+            <p>Execute a debug request within a debug session. This will call an external LLM API and record the result.</p>
+            <h3>Path Parameters</h3>
+            <table>
+                <thead>
+                    <tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>id</code></td><td>path</td><td>integer</td><td>The ID of the playground.</td></tr>
+                    <tr><td><code>session_id</code></td><td>path</td><td>integer</td><td>The ID of the debug session.</td></tr>
+                </tbody>
+            </table>
+            <h3>Request Body</h3>
+            <pre><code class="language-json">
+{
+    "turn_number": 2,
+    "context": [
+        { "role": "user", "content": "Hello!" },
+        { "role": "assistant", "content": "Hi there!" }
+    ],
+    "user_input": "How are you?",
+    "provider": "openai",
+    "model": "gpt-4",
+    "config": {
+        "temperature": 0.8,
+        "max_tokens": 150
+    }
+}
+            </code></pre>
+            <h3>Responses</h3>
+            <p><strong>200 OK</strong></p>
+            <pre><code class="language-json">
+{
+    "success": true,
+    "message": "Success",
+    "data": {
+        "id": "chatcmpl-456",
+        "model": "gpt-4-0613",
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": "I'm just a computer program, but I'm doing great! How can I help you?"
+                },
+                "finish_reason": "stop"
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 20,
+            "completion_tokens": 15,
+            "total_tokens": 35
+        }
+    }
+}
+            </code></pre>
+        </div>
+    </details>
+
+    <!-- Endpoint: GET /api/providers -->
+    <details>
+        <summary>
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/providers</span>
+        </summary>
+        <div class="endpoint-content">
+            <p>Get a list of available providers and their models from the configuration.</p>
+            <h3>Responses</h3>
+            <p><strong>200 OK</strong></p>
+            <pre><code class="language-json">
+{
+    "success": true,
+    "message": "Success",
+    "data": [
+        {
+            "name": "openai",
+            "models": ["gpt-4", "gpt-3.5-turbo"]
+        },
+        {
+            "name": "anthropic",
+            "models": ["claude-2", "claude-instant-1"]
+        }
+    ]
+}
+            </code></pre>
+        </div>
+    </details>
+
+    <!-- Endpoint: GET /health -->
+    <details>
+        <summary>
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/health</span>
+        </summary>
+        <div class="endpoint-content">
+            <p>Perform a health check of the API server.</p>
+            <h3>Responses</h3>
+            <p><strong>200 OK</strong></p>
+            <pre><code class="language-json">
+{
+    "status": "ok"
+}
+            </code></pre>
+        </div>
+    </details>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', (event) => {
+        document.querySelectorAll('pre code.language-json').forEach((block) => {
+            try {
+                const jsonObj = JSON.parse(block.textContent.trim());
+                block.textContent = JSON.stringify(jsonObj, null, 2);
+            } catch (e) {
+                // Ignore if it's not valid JSON
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
