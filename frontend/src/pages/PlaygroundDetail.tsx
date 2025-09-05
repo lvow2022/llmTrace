@@ -2,7 +2,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, MessageSquare, Play, Pause, Code } from "lucide-react";
 import { useAppStore } from "../store";
-import { getPlayground, getProviders, getDebugSession } from "../services/api";
+import {
+  getPlayground,
+  getProviders,
+  getDebugSession,
+  debug,
+} from "../services/api";
 import {
   Playground,
   ChatMessage,
@@ -127,22 +132,24 @@ const PlaygroundDetail: React.FC = () => {
 
   // 发送消息
   const sendMessage = async () => {
-    if (!currentInput.trim() || isSending) return;
+    if (!currentInput.trim() || isSending || !playground || !debugSessionId)
+      return;
 
     const userMessage: ChatMessage = {
       role: "user",
       content: currentInput.trim(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setCurrentInput("");
     setIsSending(true);
 
     try {
       // 构造调试请求
       const debugRequest: PlaygroundDebugRequest = {
-        turn_number: messages.length + 1,
-        context: messages,
+        turn_number: newMessages.length, // turn_number should be based on the new messages length
+        context: messages, // context should be the messages before adding the new user message
         user_input: userMessage.content,
         provider: selectedProvider,
         model: selectedModel,
@@ -153,24 +160,40 @@ const PlaygroundDetail: React.FC = () => {
       setDebugData({
         request: debugRequest,
         timestamp: new Date().toISOString(),
-        playground_id: playground?.id,
+        playground_id: playground.id,
         session_id: debugSessionId,
       });
 
       // 调用调试API
-      // const response = await playgroundsAPI.debug(playground!.id, debugSessionId!, debugRequest);
+      const response = await debug(playground.id, debugSessionId, debugRequest);
 
       // 模拟响应
-      setTimeout(() => {
+      if (
+        response &&
+        response.choices &&
+        response.choices.length > 0 &&
+        response.choices[0].message
+      ) {
         const assistantMessage: ChatMessage = {
           role: "assistant",
-          content: `这是对 "${userMessage.content}" 的模拟响应。在实际环境中，这里会显示真实的AI回复。`,
+          content:
+            response.choices[0].message.content ||
+            "抱歉，我无法生成有效的回复。",
         };
         setMessages((prev) => [...prev, assistantMessage]);
-        setIsSending(false);
-      }, 1000);
+      } else {
+        throw new Error("API响应格式不正确或为空");
+      }
     } catch (err) {
       console.error("发送消息失败:", err);
+      const errorMessage: ChatMessage = {
+        role: "assistant",
+        content: `发送消息失败: ${
+          (err as Error).message || "未知错误"
+        }. 请检查控制台获取更多信息。`,
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsSending(false);
     }
   };

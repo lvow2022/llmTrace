@@ -33,7 +33,7 @@ const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4">                   
         <h3 className="text-lg font-medium text-gray-900">模型配置</h3>
         <Settings className="w-5 h-5 text-gray-400" />
       </div>

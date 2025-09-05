@@ -18,7 +18,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   currentInput,
   onInputChange,
   onSendMessage,
-  isSending,
+  isSending, 
   selectedModel,
   modelConfig,
 }) => {
