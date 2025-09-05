@@ -169,7 +169,7 @@ const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({
         </div>
 
         {/* 配置摘要 */}
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+        {/* <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
           <h4 className="text-sm font-medium text-blue-900 mb-2">当前配置</h4>
           <div className="text-xs text-blue-800 space-y-1">
             <div>提供商: {selectedProvider}</div>
@@ -182,7 +182,7 @@ const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({
               {config.stream ? "是" : "否"}
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

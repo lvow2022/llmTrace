@@ -500,9 +500,9 @@ const PlaygroundDetail: React.FC = () => {
       )}
 
       {isDebugging ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* 左侧：模型配置和上下文 */}
-          <div className="space-y-6">
+          <div className="space-y-6 lg:col-span-2">
             {/* 模型配置 */}
             <ModelConfigPanel
               config={modelConfig}
@@ -524,7 +524,7 @@ const PlaygroundDetail: React.FC = () => {
           </div>
 
           {/* 右侧：对话界面 */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             <ChatInterface
               messages={messages}
               currentInput={currentInput}

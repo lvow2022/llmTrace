@@ -68,7 +68,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full flex flex-col">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-[1400px] flex flex-col">
       {/* 对话头部 */}
       <div className="px-6 py-4 border-b border-gray-200 bg-gray-50/70 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center justify-between">
@@ -103,7 +103,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             if (message.role === "system") {
               return (
                 <div key={index} className="text-center my-4">
-                  <p className="text-xs text-gray-400 bg-gray-100 rounded-full px-3 py-1 inline-block">
+                  <p className="text-xs text-gray-400 bg-gray-100  px-3 py-1 inline-block">
                     {message.content}
                   </p>
                 </div>
