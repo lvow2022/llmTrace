@@ -6,6 +6,7 @@ import {
   getPlaygroundSessions,
   createDebugSessionFromRecord,
   createPlayground,
+  getPlayground,
 } from "../services/api";
 import Modal from "./ui/Modal";
 import Button from "./ui/Button";
@@ -35,7 +36,10 @@ const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose, record }) => {
       if (response && response.data) {
         setPlaygrounds(response.data);
       } else {
-        console.error("DebugModal: API returned incorrect data format:", response);
+        console.error(
+          "DebugModal: API returned incorrect data format:",
+          response
+        );
         setPlaygrounds([]);
       }
     } catch (err) {
@@ -64,32 +68,26 @@ const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose, record }) => {
       setError("");
 
       // 获取 Playground 详情，查看是否已有调试会话
-      const res = await getPlaygroundSessions(
-        selectedPlaygroundId
+      const response = await getPlayground(selectedPlaygroundId);
+      const sessions = response.sessions || [];
+      const existingSession = sessions.find(
+        (session: any) => session.original_record_id === record.id
       );
 
-      console.log(res);
-
-      // const sessions = res.data.sessions;
-
-      let sessionId = res.data?.playground?.id;
-      if (!sessionId) {
+      if (existingSession) {
+        console.log("Found existing debug session:", existingSession.id);
+      } else {
+        console.log("No existing debug session found, creating a new one.");
         // 创建新的调试会话
-        const debugSession = await createDebugSessionFromRecord(
-          record.id.toString(),
-          {
-            playground_id: selectedPlaygroundId,
-            name: `调试会话_${record.turn_number}`,
-          }
-        );
-        sessionId = debugSession.id;
+        await createDebugSessionFromRecord(record.id.toString(), {
+          playground_id: selectedPlaygroundId,
+          name: `调试会话_${record.turn_number}`,
+        });
       }
 
-      if (sessionId) {
-        onClose();
-        // 跳转到选中的 Playground 的调试会话
-        navigate(`/playground/${selectedPlaygroundId}`);
-      }
+      onClose();
+      // 跳转到选中的 Playground
+      navigate(`/playground/${selectedPlaygroundId}`);
     } catch (err) {
       console.error("开始调试失败:", err);
       setError("开始调试失败");
@@ -104,7 +102,7 @@ const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose, record }) => {
       setError("");
 
       // 创建新的 Playground
-      const newPlayground = await createPlayground({ 
+      const newPlayground = await createPlayground({
         name: newPlaygroundName,
         description: `基于会话 ${record.session_id} 轮次 ${record.turn_number} 创建的调试环境`,
       });
