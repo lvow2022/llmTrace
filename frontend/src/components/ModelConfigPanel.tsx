@@ -158,7 +158,7 @@ const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({
         </div>
 
         {/* 流式响应 */}
-        <div className="flex items-center justify-between">
+        {/* <div className="flex items-center justify-between">
           <label className="text-sm font-medium text-gray-700">流式响应</label>
           <input
             type="checkbox"
@@ -166,7 +166,7 @@ const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({
             onChange={(e) => updateConfig("stream", e.target.checked)}
             className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
           />
-        </div>
+        </div> */}
 
         {/* 配置摘要 */}
         {/* <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">

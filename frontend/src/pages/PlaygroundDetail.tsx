@@ -51,12 +51,8 @@ const PlaygroundDetail: React.FC = () => {
   const [currentInput, setCurrentInput] = useState("");
   const [isSending, setIsSending] = useState(false);
 
-  // 上下文编辑
-  const [, setContextMessages] = useState<ChatMessage[]>([]);
-
   // 调试数据
   const [debugData, setDebugData] = useState<any>(null);
-  const [showDebugData, setShowDebugData] = useState(false);
 
   // 获取 playground 详情
   const fetchPlayground = useCallback(
@@ -210,12 +206,9 @@ const PlaygroundDetail: React.FC = () => {
 
   // 重置对话
   const resetConversation = () => {
-    setMessages([{ role: "system", content: "你是一个有用的AI助手。" }]);
-  };
-
-  // 保存上下文
-  const saveContext = () => {
-    setContextMessages([...messages]);
+    setMessages((prevMessages) =>
+      prevMessages.filter((message) => message.role === "system")
+    );
   };
 
   // 开始调试会话
@@ -405,16 +398,6 @@ const PlaygroundDetail: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-3">
-          {isDebugging && debugData && (
-            <Button
-              onClick={() => setShowDebugData(!showDebugData)}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2"
-            >
-              <Code className="w-4 h-4 mr-2" />
-              {showDebugData ? "隐藏" : "查看"}调试数据
-            </Button>
-          )}
-
           {!isDebugging ? (
             <Link
               to="/sessions"
@@ -518,7 +501,6 @@ const PlaygroundDetail: React.FC = () => {
             <ContextEditor
               messages={messages}
               onMessagesChange={setMessages}
-              onSave={saveContext}
               onReset={resetConversation}
             />
           </div>
