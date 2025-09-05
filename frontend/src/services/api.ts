@@ -125,12 +125,17 @@ export const deleteDebugSession = (
   api.delete(`/playground/${playgroundId}/sessions/${sessionId}`);
 
 // 执行调试
-export const debug = ( 
+export const debug = async (
   playgroundId: number,
   sessionId: number,
   data: PlaygroundDebugRequest
-): Promise<any> =>
-  api.post(`/playground/${playgroundId}/sessions/${sessionId}/debug`, data);
+): Promise<any> => {
+  const response = await api.post(
+    `/playground/${playgroundId}/sessions/${sessionId}/debug`,
+    data
+  );
+  return response.data as any;
+};
 
 // --- Providers ---
 

@@ -42,8 +42,8 @@ const PlaygroundDetail: React.FC = () => {
   });
 
   // 提供商和模型选择
-  const [selectedProvider, setSelectedProvider] = useState("openai");
-  const [selectedModel, setSelectedModel] = useState("gpt-3.5-turbo");
+  const [selectedProvider, setSelectedProvider] = useState("");
+  const [selectedModel, setSelectedModel] = useState("");
   const [availableProviders, setAvailableProviders] = useState<any[]>([]);
 
   // 对话状态
@@ -106,6 +106,16 @@ const PlaygroundDetail: React.FC = () => {
       setAvailableProviders([]);
     }
   }, []);
+
+  useEffect(() => {
+    if (availableProviders && availableProviders.length > 0) {
+      const firstProvider = availableProviders[0];
+      setSelectedProvider(firstProvider.name);
+      if (firstProvider.models && firstProvider.models.length > 0) {
+        setSelectedModel(firstProvider.models[0]);
+      }
+    }
+  }, [availableProviders]);
 
   // 初始化调试会话
   const initializeDebugSession = useCallback(async () => {
@@ -339,6 +349,14 @@ const PlaygroundDetail: React.FC = () => {
     fetchProviders();
   }, [id, fetchPlayground, fetchProviders]);
 
+  const handleProviderChange = (providerName: string) => {
+    setSelectedProvider(providerName);
+    const provider = availableProviders.find((p) => p.name === providerName);
+    if (provider && provider.models && provider.models.length > 0) {
+      setSelectedModel(provider.models[0]);
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -491,7 +509,7 @@ const PlaygroundDetail: React.FC = () => {
               onConfigChange={setModelConfig}
               selectedProvider={selectedProvider}
               selectedModel={selectedModel}
-              onProviderChange={setSelectedProvider}
+              onProviderChange={handleProviderChange}
               onModelChange={setSelectedModel}
               availableProviders={availableProviders}
             />

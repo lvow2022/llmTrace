@@ -18,11 +18,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   currentInput,
   onInputChange,
   onSendMessage,
-  isSending, 
+  isSending,
   selectedModel,
   modelConfig,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -32,6 +33,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     scrollToBottom();
   }, [messages]);
 
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [currentInput]);
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -39,29 +48,38 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
-  const formatMessageContent = (content: string) => {
-    // 简单的换行处理
-    return content.split("\n").map((line, index) => (
-      <span key={index}>
-        {line}
-        {index < content.split("\n").length - 1 && <br />}
-      </span>
-    ));
+  const MessageIcon = ({ role }: { role: string }) => {
+    switch (role) {
+      case "user":
+        return (
+          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white flex-shrink-0">
+            <User size={18} />
+          </div>
+        );
+      case "assistant":
+        return (
+          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white flex-shrink-0">
+            <Bot size={18} />
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-[1100px] flex flex-col">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full flex flex-col">
       {/* 对话头部 */}
-      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50/70 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-medium text-gray-900">调试对话</h3>
-          <div className="flex items-center space-x-4 text-sm text-gray-500">
-            <div className="flex items-center space-x-1">
-              <Bot className="w-4 h-4" />
-              <span>{selectedModel}</span>
+          <div className="flex items-center space-x-4 text-sm text-gray-600">
+            <div className="flex items-center space-x-1.5">
+              <Bot className="w-4 h-4 text-gray-400" />
+              <span className="font-medium">{selectedModel}</span>
             </div>
-            <div className="flex items-center space-x-1">
-              <Settings className="w-4 h-4" />
+            <div className="flex items-center space-x-1.5">
+              <Settings className="w-4 h-4 text-gray-400" />
               <span>温度: {modelConfig.temperature}</span>
             </div>
           </div>
@@ -69,65 +87,60 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
 
       {/* 消息列表 */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <Bot className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">开始您的调试对话</p>
+            <div className="text-center text-gray-500">
+              <Bot size={48} className="mx-auto text-gray-300 mb-4" />
+              <p className="font-medium">开始您的调试对话</p>
               <p className="text-sm text-gray-400 mt-1">
                 输入消息来测试模型响应
               </p>
             </div>
           </div>
         ) : (
-          messages.map((message, index) => (
-            <div
-              key={index}
-              className={`flex ${
-                message.role === "user" ? "justify-end" : "justify-start"
-              }`}
-            >
+          messages.map((message, index) => {
+            if (message.role === "system") {
+              return (
+                <div key={index} className="text-center my-4">
+                  <p className="text-xs text-gray-400 bg-gray-100 rounded-full px-3 py-1 inline-block">
+                    {message.content}
+                  </p>
+                </div>
+              );
+            }
+            return (
               <div
-                className={`max-w-[80%] p-4 rounded-lg ${
-                  message.role === "user"
-                    ? "bg-blue-600 text-white"
-                    : message.role === "assistant"
-                    ? "bg-gray-100 text-gray-900"
-                    : "bg-yellow-100 text-yellow-900"
+                key={index}
+                className={`flex items-start gap-3 ${
+                  message.role === "user" ? "justify-end" : "justify-start"
                 }`}
               >
-                <div className="flex items-center space-x-2 mb-2">
-                  {message.role === "user" ? (
-                    <User className="w-4 h-4" />
-                  ) : message.role === "assistant" ? (
-                    <Bot className="w-4 h-4" />
-                  ) : (
-                    <Settings className="w-4 h-4" />
-                  )}
-                  <span className="text-xs font-medium">
-                    {message.role === "user"
-                      ? "用户"
-                      : message.role === "assistant"
-                      ? "AI助手"
-                      : "系统"}
-                  </span>
+                {message.role === "assistant" && (
+                  <MessageIcon role="assistant" />
+                )}
+                <div
+                  className={`max-w-[70%] p-3 px-4 rounded-xl shadow-sm ${
+                    message.role === "user"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100 text-gray-800"
+                  }`}
+                >
+                  <p className="text-sm whitespace-pre-wrap">
+                    {message.content}
+                  </p>
                 </div>
-                <div className="text-sm whitespace-pre-wrap">
-                  {formatMessageContent(message.content)}
-                </div>
+                {message.role === "user" && <MessageIcon role="user" />}
               </div>
-            </div>
-          ))
+            );
+          })
         )}
 
         {isSending && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 p-4 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm text-gray-600">AI正在思考...</span>
-              </div>
+          <div className="flex items-start gap-3 justify-start">
+            <MessageIcon role="assistant" />
+            <div className="bg-gray-100 p-3 px-4 rounded-xl shadow-sm flex items-center">
+              <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
             </div>
           </div>
         )}
@@ -136,37 +149,30 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
 
       {/* 输入区域 */}
-      <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-        <div className="flex space-x-3">
-          <div className="flex-1 relative">
-            <textarea
-              value={currentInput}
-              onChange={(e) => onInputChange(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="输入您的消息... (Shift+Enter 换行，Enter 发送)"
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              rows={1}
-              disabled={isSending}
-              style={{ minHeight: "40px", maxHeight: "120px" }}
-            />
-          </div>
+      <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/70">
+        <div className="flex items-end gap-3">
+          <textarea
+            ref={textareaRef}
+            value={currentInput}
+            onChange={(e) => onInputChange(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="输入您的消息..."
+            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none transition-shadow duration-200"
+            rows={2}
+            disabled={isSending}
+            style={{ maxHeight: "150px" }}
+          />
           <Button
             onClick={onSendMessage}
             disabled={!currentInput.trim() || isSending}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 self-end"
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0"
           >
             {isSending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-              <Send className="w-4 h-4" />
+              <Send className="w-5 h-5" />
             )}
           </Button>
-        </div>
-
-        {/* 输入提示 */}
-        <div className="mt-2 text-xs text-gray-500">
-          <span>按 Enter 发送，Shift+Enter 换行</span>
-          <span className="ml-4">当前消息长度: {currentInput.length}</span>
         </div>
       </div>
     </div>
