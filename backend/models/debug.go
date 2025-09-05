@@ -215,7 +215,7 @@ func GetDebugSessionRecords(sessionID uint, page, size int) ([]DebugRecord, int6
 
 	var debugRecords []DebugRecord
 	offset := (page - 1) * size
-	if err := db.Where("debug_session_id = ?", sessionID).Offset(offset).Limit(size).Order("turn_number ASC").Find(&debugRecords).Error; err != nil {
+	if err := db.Where("debug_session_id = ?", sessionID).Offset(offset).Limit(size).Order("turn_number DESC").Find(&debugRecords).Error; err != nil {
 		return nil, 0, err
 	}
 

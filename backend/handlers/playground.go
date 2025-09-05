@@ -259,8 +259,8 @@ func (h *Handler) HandleGetDebugSession(c *gin.Context) {
 		return
 	}
 
-	// 获取调试会话详情（包含所有记录）
-	debugSessionWithRecords, err := getDebugSessionWithRecords(uint(id))
+	// 获取调试会话详情（包含最近一条记录）
+	debugSessionWithRecords, err := getDebugSessionWithLatestRecord(uint(id))
 	if err != nil {
 		sendInternalServerError(c, "Failed to get debug session: "+err.Error())
 		return
@@ -428,8 +428,8 @@ func getDebugSession(sessionID uint) (interface{}, error) {
 	return models.GetDebugSession(sessionID)
 }
 
-func getDebugSessionWithRecords(sessionID uint) (interface{}, error) {
-	// 获取调试会话详情（包含所有记录）
+func getDebugSessionWithLatestRecord(sessionID uint) (interface{}, error) {
+	// 获取调试会话详情（包含最近一条记录）
 	debugSession, err := models.GetDebugSession(sessionID)
 	if err != nil {
 		return nil, err
@@ -438,8 +438,8 @@ func getDebugSessionWithRecords(sessionID uint) (interface{}, error) {
 		return nil, nil
 	}
 
-	// 获取调试会话的所有记录（不分页，获取全部）
-	records, _, err := models.GetDebugSessionRecords(sessionID, 1, 1000) // 使用较大的size获取所有记录
+	// 获取调试会话的最近一条记录
+	records, _, err := models.GetDebugSessionRecords(sessionID, 1, 1) // 只获取最近的一条记录
 	if err != nil {
 		return nil, err
 	}
