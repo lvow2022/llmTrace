@@ -183,15 +183,6 @@ const Playgrounds: React.FC = () => {
             <span className="text-sm text-gray-600">
               共 {filteredPlaygrounds.length} 个调试环境
             </span>
-            <Button
-              type="primary"
-              icon={<Plus className="w-4 h-4" />}
-              onClick={() => {
-                /* 这里可以添加创建新 Playground 的功能 */
-              }}
-            >
-              新建调试环境
-            </Button>
           </div>
         </div>
       </div>
